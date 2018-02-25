@@ -41,3 +41,6 @@ luac.out
 
 # Love, a convenient place to put in the libraries and/or executables
 love/
+.buildpath
+.project
+.settings/
