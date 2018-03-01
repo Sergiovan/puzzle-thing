@@ -44,3 +44,5 @@ love/
 .buildpath
 .project
 .settings/
+
+\.idea/
