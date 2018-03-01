@@ -1,10 +1,15 @@
-package.path = package.path .. ';src/?.lua'
-State = require 'game.state'
-Cell = require 'game.cell'
+package.path = package.path .. ';src/?.lua' -- To skip src folder when including
+io.stdout:setvbuf("no") -- To get print statements to work properly
+
+-- All requires here
+
+State = require 'game.state.state'
 
 function love.load(arg)
   current_state = {State()}
-  cell = Cell()
+  love.mouse.setVisible(false)
+  love.window.setTitle "Puzzle thing"
+  mouse_img = love.graphics.newImage("img/cursor.png")
 end
 
 function love.update(dt)
@@ -20,7 +25,10 @@ end
 
 function love.draw()
   current_state[1]:draw()
-  cell:draw(4, 20) -- Blaze it
+  mx, my = love.mouse.getPosition()
+  love.graphics.draw(mouse_img, mx-5, my-5)
 end
 
-print("Hello, Löve")
+function love.conf()
+  t.console = true -- Remove later
+end
