@@ -15,4 +15,57 @@ That's not a question
 Maybe? 
 
 ## TODO
-- [ ] Everything, still
+* [ ] GUI
+  * [ ] Text
+    * [ ] Labels
+    * [ ] Input?
+  * [ ] Button
+  * [ ] “Tabs”?
+  * [ ] Slider?
+  * [ ] Checkbox?
+  * [ ] Toggle?
+  * [ ] Console?
+* [ ] Game
+  * [ ] Engine
+    * [ ] State
+      * [ ] Game
+        * [ ] Puzzle Mode
+        * [ ] Story Mode?
+        * [ ] Random Mode?
+        * [ ] Endless Mode?
+      * [ ] Menu?
+      * [ ] Splash?
+      * [ ] Credits?
+    * [ ] Graphics
+      * [ ] Image loading and storing
+      * [ ] Rendering
+      * [ ] Shaders?
+    * [ ] Menu?
+      * [ ] Main menu
+      * [ ] Level select
+    * [ ] Levels
+      * [ ] Board
+      * [ ] Loading
+      * [ ] Saving?
+    * [ ] Sound
+    * [ ] “Cutscenes”?
+    * [ ] Animation?
+  * [ ] Board
+    * [ ] Basic cell
+    * [ ] Obstacle cell
+    * [ ] Player position
+    * [ ] More cells?
+  * [ ] Control
+    * [ ] Mouse
+    * [ ] Keyboard?
+    * [ ] Controller?
+  * [ ] Logic
+    * [ ] Movement
+    * [ ] Winning
+    * [ ] Losing?
+      * [ ] Detect too many dead ends?
+    * [ ] Score?
+       * [ ] Time?
+* [ ] Solver?
+* [ ] Generator?
+* [ ] Editor?
