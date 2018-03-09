@@ -2,7 +2,7 @@
 local utils = require 'utils.utils'
 local module = {}
 
-Cell = utils.make_class()
+local Cell = utils.make_class()
 
 Cell.width = 50
 Cell.height = 50
@@ -17,13 +17,16 @@ function Cell:_init(x, y)
   self.y = y
   self.value = 1
   self.solid = false
+  self.focused = false
 end
 
-function Cell:draw(focused)
-  love.graphics.setColor(focused and self.focused_border_color or self.border_color[self.value + 1])
-  love.graphics.rectangle('fill', self.x, self.y, self.width, self.height)
-  love.graphics.setColor(focused and self.focused_color or self.color[self.value + 1])
-  love.graphics.rectangle('fill', self.x+1, self.y+1, self.width-2, self.height-2)
+function Cell:draw(x, y)
+  x = x or 0
+  y = y or 0
+  love.graphics.setColor(self.focused and self.focused_border_color or self.border_color[self.value + 1])
+  love.graphics.rectangle('fill', self.x+x, self.y+y, self.width, self.height)
+  love.graphics.setColor(self.focused and self.focused_color or self.color[self.value + 1])
+  love.graphics.rectangle('fill', self.x+1+x, self.y+1+y, self.width-2, self.height-2)
 end
 
 function Cell:solid()
@@ -38,7 +41,11 @@ function Cell:enter()
   self.value = self.value - 1
 end
 
-WallCell = utils.make_class(Cell)
+function Cell:set_focused(focused)
+  self.focused = focused
+end
+
+local WallCell = utils.make_class(Cell)
 WallCell.color = {0, 0, 0}
 WallCell.border_color = {25, 25, 25 }
 
@@ -48,11 +55,13 @@ function WallCell:_init(x, y)
   self.solid = true
 end
 
-function WallCell:draw(_)
+function WallCell:draw(x, y)
+  x = x or 0
+  y = y or 0
   love.graphics.setColor(self.border_color)
-  love.graphics.rectangle('fill', self.x, self.y, self.width, self.height)
+  love.graphics.rectangle('fill', self.x+x, self.y+y, self.width, self.height)
   love.graphics.setColor(self.color)
-  love.graphics.rectangle('fill', self.x+1, self.y+1, self.width-2, self.height-2)
+  love.graphics.rectangle('fill', self.x+1+x, self.y+1+y, self.width-2, self.height-2)
 end
 
 module.Cell = Cell

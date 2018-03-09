@@ -8,8 +8,10 @@ function State:_init()
   self.board = Board(50, 50, 10, 10)
 end
 
-function State:draw()
-  self.board:draw()
+function State:draw(x, y)
+  x = x or 0
+  y = y or 0
+  self.board:draw(x, y)
 end
 
 function State:update(dt)
