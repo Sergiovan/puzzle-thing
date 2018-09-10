@@ -9,9 +9,9 @@ local gui   = require 'gui.gui'
 
 local love = love
 
-
 function love.load(arg)
   current_state = {State()}
+  current_state[1].gui[1] = gui.Label(0, 0, "Fancy")
   love.mouse.setVisible(false)
   love.window.setTitle "Puzzle thing"
   mouse_img = love.graphics.newImage "img/cursor.png"

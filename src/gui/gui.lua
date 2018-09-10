@@ -1,5 +1,6 @@
 -- gui/gui.lua
 local utils = require 'utils.utils'
+local Animator = require 'utils.animator'
 
 local module = {}
 local colors = {}
@@ -16,16 +17,32 @@ function Label:_init(x, y, text, font)
   self.y = y
   self.text = text
   self.font = font or fonts.default
+  self.color = {1, 1, 1}
+  self.anim = {
+    Animator(self.color, {
+      {[1] = Animator.fromToIn(1, 0, 1), [2] = Animator.fromToIn(1, 0, 1), [3] = Animator.fromToIn(0, 1, 1)},
+      1,
+      {[2] = Animator.fromToIn(0, 1, 1), [3] = Animator.fromToIn(1, 0, 1)},
+      1,
+      {[1] = Animator.fromToIn(0, 1, 1), [2] = Animator.fromToIn(1, 0, 1)},
+      1
+    }, true, true),
+    Animator(self, {{x = Animator.fromToIn(x, x + 100, 2)}, 0, {x = Animator.fromToIn(x + 100, x, 2)}}, true, true)
+  }
   self._text = love.graphics.newText(self.font, self.text)
 end
 
 function Label:draw(x, y)
   x = x or 0
   y = y or 0
+  love.graphics.setColor(self.color)
   love.graphics.draw(self._text, self.x + x, self.y + y)
 end
 
 function Label:update(dt)
+  for k, v in ipairs(self.anim) do
+    v:update(dt)
+  end
 end
 
 function Label:setText(text)
