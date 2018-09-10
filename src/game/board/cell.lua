@@ -7,10 +7,10 @@ local Cell = utils.make_class()
 Cell.width = 50
 Cell.height = 50
 
-Cell.color = {{248, 40, 89}, {62, 193, 247}}
-Cell.border_color = {{198, 0, 39}, {12, 143, 197}}
-Cell.focused_color = {250, 231, 96}
-Cell.focused_border_color = {200, 181, 46}
+Cell.color = {{248/255, 40/255, 89/255}, {62/255, 193/255, 247/255}}
+Cell.border_color = {{198/255, 0, 39/255}, {12/255, 143/255, 197/255}}
+Cell.focused_color = {250/255, 231/255, 96/255}
+Cell.focused_border_color = {200/255, 181/255, 46/255}
 
 function Cell:_init(x, y)
   self.x = x

@@ -5,6 +5,7 @@ io.stdout:setvbuf("no") -- To get print statements to work properly
 
 local State = require 'game.state.state'
 local input = require 'input.input'
+local gui   = require 'gui.gui'
 
 local love = love
 
@@ -34,6 +35,8 @@ function love.draw()
   local mx, my = input:get_mouse_position()
   love.graphics.setColor(255, 255, 255, 255)
   love.graphics.draw(mouse_img, mx-5, my-5)
+
+  love.graphics.print("Current FPS: "..tostring(love.timer.getFPS( )), 0, love.graphics.getHeight() - 15)
 end
 
 function love.keypressed(key, scancode, isrepeat)

@@ -33,6 +33,9 @@ module.make_class = function (...)
   return cls
 end
 
-
+module.file_exists = function(path)
+  local info = love.filesystem.getInfo(path)
+  return info ~= nil
+end
 
 return module
