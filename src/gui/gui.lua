@@ -7,7 +7,7 @@ local colors = {}
 colors.default = {1, 1, 1}
 local fonts = {}
 fonts.default = love.graphics.newFont(36)
-fonts.console = utils.file_exists 'res/Consolas.ttf' and love.graphics.newFont('res/Consolas.ttf', 24) or fonts.default
+fonts.console = utils.file_exists 'res/Consolas.ttf' and love.graphics.newFont('res/Consolas.ttf', 16) or fonts.default
 fonts.game    = utils.file_exists 'res/GameFont.ttf' and love.graphics.newFont('res/GameFont.ttf', 60) or fonts.default
 
 local Label = utils.make_class()

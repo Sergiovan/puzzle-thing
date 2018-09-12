@@ -8,6 +8,7 @@ State = utils.make_class()
 function State:_init()
   self.board = Board(50, 50, 10, 10)
   self.gui = {}
+  self.mouse = nil
 end
 
 function State:draw(x, y)

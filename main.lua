@@ -3,6 +3,7 @@ io.stdout:setvbuf("no") -- To get print statements to work properly
 
 -- All requires here
 
+local game  = require 'game.game'
 local State = require 'game.state.state'
 local input = require 'input.input'
 local gui   = require 'gui.gui'
@@ -10,33 +11,20 @@ local gui   = require 'gui.gui'
 local love = love
 
 function love.load(arg)
-  current_state = {State()}
-  current_state[1].gui[1] = gui.Label(0, 0, "Fancy")
   love.mouse.setVisible(false)
   love.window.setTitle "Puzzle thing"
-  mouse_img = love.graphics.newImage "img/cursor.png"
+  love.keyboard.setKeyRepeat(true)
+  game:init()
 end
 
 function love.update(dt)
   input:update(dt)
-  local change, new = current_state[1]:update(dt)
-  if change then
-    if new then
-      current_state[#current_state+1] = new
-    else
-      table.remove(current_state, #current_state)
-    end
-  end
+  game:update(dt)
   input:clear(dt)
 end
 
 function love.draw()
-  current_state[1]:draw(0, 0)
-  local mx, my = input:get_mouse_position()
-  love.graphics.setColor(255, 255, 255, 255)
-  love.graphics.draw(mouse_img, mx-5, my-5)
-
-  love.graphics.print("Current FPS: "..tostring(love.timer.getFPS( )), 0, love.graphics.getHeight() - 15)
+  game:draw()
 end
 
 function love.keypressed(key, scancode, isrepeat)

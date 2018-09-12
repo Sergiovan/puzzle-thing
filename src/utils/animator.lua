@@ -52,6 +52,10 @@ function Animator:update(dt)
       self:skip(changes)
       return self:update(0) -- Tail call, yay
     end
+  elseif type(changes) == 'function' then
+    changes()
+    self:skip(0)
+    return self:update(0)
   else
     local count = 0
     local done = 0
@@ -86,6 +90,22 @@ function Animator:stop()
   end
 end
 
+function Animator:terminate(forced)
+  if not forced then
+    for i=self.step,#self.changes do 
+      local changes = self.changes[i]
+      if type(changes) == 'function' then
+        changes()
+      elseif type(changes) == 'table' then
+        for k, v in pairs(changes) do
+          self.values[k] = v.from + v.diff
+        end
+      end
+    end
+  end
+  self.finished = true
+end
+
 function Animator:reset()
   self.started = false
   self.stopped = false
@@ -109,7 +129,7 @@ function Animator:skip(elapsed, forced)
   end
   self.elapsed = nelapsed
   local changes = self.changes[self.step]
-  if type(changes) ~= 'number' then
+  if type(changes) == 'table' then
     for k, v in pairs(changes) do 
       self.values[k] = v['from']
     end
