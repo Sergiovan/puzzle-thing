@@ -17,18 +17,8 @@ function Label:_init(x, y, text, font)
   self.y = y
   self.text = text
   self.font = font or fonts.default
-  self.color = {1, 1, 1}
-  self.anim = {
-    Animator(self.color, {
-      {[1] = Animator.fromToIn(1, 0, 1), [2] = Animator.fromToIn(1, 0, 1), [3] = Animator.fromToIn(0, 1, 1)},
-      1,
-      {[2] = Animator.fromToIn(0, 1, 1), [3] = Animator.fromToIn(1, 0, 1)},
-      1,
-      {[1] = Animator.fromToIn(0, 1, 1), [2] = Animator.fromToIn(1, 0, 1)},
-      1
-    }, true, true),
-    Animator(self, {{x = Animator.fromToIn(x, x + 100, 2)}, 0, {x = Animator.fromToIn(x + 100, x, 2)}}, true, true)
-  }
+  self.color = {1, 1, 0}
+  self.anim = {}
   self._text = love.graphics.newText(self.font, self.text)
 end
 

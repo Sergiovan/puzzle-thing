@@ -48,3 +48,5 @@ love/
 \.idea/
 
 res/Consolas\.ttf
+
+\.vscode/

@@ -3,12 +3,28 @@ local utils = require 'utils.utils'
 
 local Animator = utils.make_class()
 
-function Animator.valueChange(c, l)
-  return {change = c, limit = l}
-end
+function Animator.fromToIn(f, t, i, a)
+  local function linear(x)
+    return x
+  end
 
-function Animator.fromToIn(f, t, i)
-  return {change = (t - f) / i, limit = t}
+  local function cube(x)
+    return x ^ 3
+  end
+
+  local function rcube(x)
+    return (x - 1) ^ 3 + 1
+  end
+
+  local function fse(x)
+    return (math.tan(x*2.5 - 1.25) + 3) / 6 -- ((tan((x*2.5-1.25))+3)/6
+  end
+
+  a = a or 'linear'
+  selection = {linear = linear, cube = cube, rcube = rcube, fse = fse}
+  local func = type(a) == 'string' and selection[a] or a
+
+  return {from = f, diff = t - f, time = i, func = func}
 end
 
 function Animator:_init(values, changes, start, loop)
@@ -28,62 +44,33 @@ function Animator:update(dt)
     return 
   end
 
-  local function finish()
-    if self.loop then 
-      self:reset()
-      self.started = true
-    else
-      self.finished = true
-    end
-  end
-
   self.elapsed = self.elapsed + dt
-  local cchange = self.changes[self.step]
 
-  if self.step % 2 == 0 then
-    self.elapsed = self.elapsed + dt
-    if self.elapsed >= cchange then 
-      dt = dt - self.elapsed
-      self.step = self.step + 1
-      self.elapsed = 0
-      if self.step > #self.changes then
-        finish()
-        if not self.loop then
-          return
-        end
+  local changes = self.changes[self.step]
+  if type(changes) == 'number' then
+    if self.elapsed > changes then
+      self:skip(changes)
+      return self:update(0) -- Tail call, yay
+    end
+  else
+    local count = 0
+    local done = 0
+    local maxelapsed = 0
+    for k, v in pairs(changes) do
+      count = count + 1
+      local x = math.min(self.elapsed / v.time, 1)
+      if x == 1 then
+        done = done + 1
+        maxelapsed = math.max(maxelapsed, v.time)
       end
-      cchange = self.changes[self.step]
-    else
-      return
+      self.values[k] = v.from + v.diff * v.func(x)
+    end
+
+    if done == count then
+      self:skip(maxelapsed)
+      return self:update(0)
     end
   end
-  
-  local count = 0
-  local atlimit = 0
-  for k, v in pairs(cchange) do
-    count = count + 1
-    if self.values[k] ~= v['limit'] then
-      if v['change'] < 0 then
-        self.values[k] = math.max(v['limit'], self.values[k] + v['change'] * dt)
-      else
-        self.values[k] = math.min(v['limit'], self.values[k] + v['change'] * dt)
-      end
-    else
-      atlimit = atlimit + 1
-    end
-  end
-
-  if atlimit == count then 
-    self.step = self.step + 1
-    self.elapsed = 0
-    if self.step > #self.changes then
-      finish()
-      if not self.loop then
-        return
-      end
-    end
-  end
-
 end
 
 function Animator:start()
@@ -104,7 +91,29 @@ function Animator:reset()
   self.stopped = false
   self.finished = false
   self.step = 1
-  self.elapsed = 0
+  self.elapsed = elapsed or 0
+end
+
+function Animator:skip(elapsed, forced)
+  forced = forced or false
+  self.step = self.step + 1
+  local nelapsed = not forced and self.elapsed - elapsed or 0
+  if self.step > #self.changes then
+    self:reset()
+    if self.loop then 
+      self.finished = false
+      self.started = true
+    else
+      return
+    end
+  end
+  self.elapsed = nelapsed
+  local changes = self.changes[self.step]
+  if type(changes) ~= 'number' then
+    for k, v in pairs(changes) do 
+      self.values[k] = v['from']
+    end
+  end
 end
 
 return Animator

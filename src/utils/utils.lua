@@ -21,14 +21,24 @@ module.make_class = function (...)
     end
     cls.is_a[base] = true
   end
+
+  -- __tostring for debug purposes
+  cls.__tostring = function(t)
+    s = ''
+    for k, v in pairs(t) do
+      s = s .. '"' .. tostring(k) .. '": "' .. tostring(v) .. '"\n'
+    end
+    return s
+  end
+
   -- the class's __call metamethod
   setmetatable(cls, {__call = function (c, ...)
-    local instance = setmetatable({}, c)
-    -- run the init method if it's there
-    local init = instance._init
-    if init then init(instance, ...) end
-    return instance
-  end})
+      local instance = setmetatable({}, c)
+      -- run the init method if it's there
+      local init = instance._init
+      if init then init(instance, ...) end
+      return instance
+    end})
   -- return the new class table, that's ready to fill with methods
   return cls
 end
