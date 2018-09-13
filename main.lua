@@ -3,6 +3,7 @@ io.stdout:setvbuf("no") -- To get print statements to work properly
 
 -- All requires here
 
+require 'utils.extension'
 local game  = require 'game.game'
 local State = require 'game.state.state'
 local input = require 'input.input'
