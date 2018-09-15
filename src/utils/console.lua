@@ -8,6 +8,9 @@ local input = require 'input.input'
 local Console = utils.make_class()
 
 local param_types = {string = {}, number = {}}
+local white = {1, 1, 1}
+local command_color = {0.6, 0.6, 0.1}
+local command_error = {1, 0, 0}
 
 function Console:_init(dir)
   self.position = dir or 'right'
@@ -16,7 +19,7 @@ function Console:_init(dir)
   
   self:resize()
 
-  self.history = {"Type 'help' for help"}
+  self.history = {{white, "Type 'help' for help"}}
   self._history = love.graphics.newText(gui.fonts.console)
   self:updateHistory()
 
@@ -44,7 +47,10 @@ function Console:_init(dir)
     self.commands[name] = {spec = specConvert(spec), func = func}
   end
   
-  addCommand('echo', {param_types.number, param_types.string, param_types.number, {'hello', 'goodbye'}}, function () end)
+  addCommand('echo', {param_types.string}, function (params) return params[2].val end)
+  addCommand('quit', {}, function (params) love.event.quit() return 'Exiting...' end)
+  addCommand('exit', {}, self.commands.quit.func)
+  addCommand('restart', {}, function (params) love.event.quit('restart') return 'Restarting...' end)
 
   self.textpos = 1
   self.lastchar = 0
@@ -55,6 +61,11 @@ function Console:_init(dir)
   self.cursor_blink = Animator(self.cursor, {{alpha = Animator.fromToIn(1, 0, 0.5)}, {alpha = Animator.fromToIn(0, 1, 0.5)}}, true, true)
   self:updateText()
   
+end
+
+function Console:log(text, color)
+  color = color or white
+  self.history[#self.history + 1] = {color, text}
 end
 
 function Console:resize()
@@ -72,15 +83,15 @@ function Console:resize()
 
   if self.visible then
     self.x = self.position == 'right' and love.graphics.getWidth() / 2 or 0
-    self.y = self.position == 'down'  and love.graphics.getHeight() / 2 or 0
+    self.y = self.position == 'down'  and love.graphics.getHeight() - self.h or 0
   else
     self.x = self.position == 'right' and love.graphics.getWidth() or 0
-    self.y = self.position == 'down'  and love.graphics.getHeight() or 0
+    self.y = self.position == 'down'  and love.graphics.getHeight() or -self.h
   end
 
   local changer = self.position == 'right' and 'x' or 'y'
   local from    = self[changer]
-  local change  = self.position == 'right' and self.w or self.h
+  local change  = self.position == 'right' and self.w or (self.position == 'down' and love.graphics.getHeight() - self.h or 0)
 
   self._open = Animator(self, {{[changer] = Animator.fromToIn(from, change, 0.5)}, stop_open})
   self._close = Animator(self, {{[changer] = Animator.fromToIn(change, from, 0.5)}, stop_close})
@@ -189,14 +200,16 @@ function Console:update(dt)
     reset_blink = true
   end
   if input.keyboard_press['return'] then 
-    self:input(self.text)
-    table.insert(self.history, self.text)
-    self.text = ''
-    self:updateHistory()
-    reset_blink = true
-    self.cursor.position = 0
-    self.textpos = 1
-    update = true
+    if #self.text > 0 then 
+      self:log(self.text, command_color)
+      self:input(self.text)
+      self.text = ''
+      self:updateHistory()
+      reset_blink = true
+      self.cursor.position = 0
+      self.textpos = 1
+      update = true
+    end
   end
   if reset_blink then 
     self.cursor_blink:reset()
@@ -360,7 +373,23 @@ function Console:test(tokens, str)
 end
 
 function Console:input(text)
-  
+  local tokens = self:tokenize(self.text)
+  local res    = self:test(tokens)
+  local name   = res[1]
+  if name.stat == correctness.error then 
+    if #res > 1 then 
+      self:log("Error: Incorrect command parameters", command_error)
+    else
+      self:log("Error: Command " .. name.val .. " does not exist", command_error)
+    end
+  elseif name.stat == correctness.missing then 
+    self:log("Error: Missing command parameters", command_error)
+  else
+    local cres = self.commands[name.val].func(res)
+    if cres and type(cres) == 'string' and #cres > 0 then 
+      self:log(cres)
+    end
+  end
 end
 
 function Console:updateHistory()
@@ -370,10 +399,11 @@ function Console:updateHistory()
 
   local dlines = {}
   local ri = allowed
-  for i=#self.history,1,-1 do 
-    local w, lines = font:getWrap(self.history[i], self.w - 10)
-    for j=#lines, 1, -1 do 
-      dlines[ri] = lines[j]
+  for i=#self.history,1,-1 do
+    local color = self.history[i][1]
+    local w, lines = font:getWrap(self.history[i][2], self.w - 10)
+    for j=#lines, 1, -1 do
+      dlines[ri] = {color, lines[j]}
       ri = ri - 1
       if ri == 0 then
         break
@@ -386,9 +416,9 @@ function Console:updateHistory()
 
   self._history:clear()
 
-  for k, v in pairs(dlines) do
-    if v then  
-      self._history:addf(v, self.w - 10, 'left', 5, (k - 1) * height + 5)
+  for i=1,allowed do
+    if dlines[i] then
+      self._history:addf(dlines[i], self.w - 10, 'left', 5, (i - 1) * height + 5)
     end
   end
 end

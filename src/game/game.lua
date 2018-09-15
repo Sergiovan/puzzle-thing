@@ -13,7 +13,7 @@ function Game:_init()
   self.default_mouse = love.graphics.newImage "img/cursor.png"
 
   self.debug = false
-  self.console = Console()
+  self.console = Console 'top'
 end
 
 function Game:init()
