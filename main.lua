@@ -4,14 +4,18 @@ io.stdout:setvbuf("no") -- To get print statements to work properly
 -- All requires here
 
 require 'utils.extension'
-local game  = require 'game.game'
-local State = require 'game.state.state'
-local input = require 'input.input'
-local gui   = require 'gui.gui'
 
 local love = love
+local game, input
 
 function love.load(arg)
+  if arg[#arg] == "-debug" then 
+    require("mobdebug").start() 
+  end
+  
+  game  = require 'game.game'
+  input = require 'input.input'
+  
   love.mouse.setVisible(false)
   love.window.setTitle "Puzzle thing"
   love.keyboard.setKeyRepeat(true)

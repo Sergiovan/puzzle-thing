@@ -1,7 +1,7 @@
 -- utils/extension.lua
 
 string.at = function(s, i) 
-  return s:sub(i, i)
+  return i <= #s and s:sub(i, i) or nil
 end
 
 string.trim = function(s)

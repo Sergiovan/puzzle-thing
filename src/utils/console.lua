@@ -134,7 +134,7 @@ function Console:draw()
   end
 end
 
-function Console:update(dt)
+function Console:update(dt) -- TODO Fix utf-8
   if not self.visible then
     return
   end
@@ -156,7 +156,7 @@ function Console:update(dt)
     self.text = self.text:sub(1, self.textpos + self.cursor.position - 1) .. input.text_input .. self.text:sub(self.textpos + self.cursor.position)
     self.cursor.position = self.cursor.position + #input.text_input
   end
-  if input.keyboard_press['backspace'] then
+  if input.keyboard_press['backspace'] then 
     if self.cursor.position + self.textpos > 1 then 
       self.text = self.text:sub(1, self.cursor.position + self.textpos - 2) .. self.text:sub(self.cursor.position + self.textpos)
       self.cursor.position = self.cursor.position - 1
@@ -164,7 +164,7 @@ function Console:update(dt)
       update = true
     end
   end
-  if input.keyboard_press['delete'] then 
+  if input.keyboard_press['delete'] then
     if self.cursor.position + self.textpos - 1 < #self.text then 
       self.text = self.text:sub(1, self.cursor.position + self.textpos - 1) .. self.text:sub(self.cursor.position + self.textpos + 1)
       reset_blink = true

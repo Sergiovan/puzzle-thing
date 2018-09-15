@@ -48,4 +48,18 @@ module.file_exists = function(path)
   return info ~= nil
 end
 
+module.deep_lisp = function(table, depth)
+  depth = depth or 0
+  if type(table) == 'table' then
+    local cur = (depth > 0 and '\n' or '') .. string.rep(' ', depth) .. '(\n' 
+    for k, v in pairs(table) do 
+      cur = cur .. string.rep(' ', depth + 1) .. '[' .. (type(k) == 'string' and ('"' .. k .. '"') or tostring(k)) .. '] = '
+      cur = cur .. module.deep_lisp(v, depth + 1) .. ',\n'
+    end
+    return cur .. string.rep(' ', depth) .. ')' 
+  else
+    return (type(table) == 'string' and ('"' .. table .. '"') or tostring(table))
+  end
+end
+
 return module

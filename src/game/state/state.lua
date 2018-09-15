@@ -6,7 +6,8 @@ local Board = require 'game.board.board'
 State = utils.make_class()
 
 function State:_init()
-  self.board = Board(50, 50, 10, 10)
+  self.board = Board(50, 50)
+  self.board:load 'res/levels.txt'
   self.gui = {}
   self.mouse = nil
 end
