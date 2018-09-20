@@ -3,6 +3,7 @@
 local utils = require 'utils.utils'
 local Cells = require 'game.board.cell'
 local input = require 'input.input'
+local Parser = require 'utils.parser'
 
 local Cell = Cells.Cell
 local WallCell = Cells.WallCell
@@ -68,13 +69,18 @@ function Board:load(file, num)
       self.board = {}
       for i=1, h do
         self.board[i] = {}
-        for j=1, w do 
-          self.board[i][j] = Cell.make_cell(level[32 + i + (j-1) * h])
+        for j=1, w do
+          local cellid = level[32 + i + (j-1) * h]
+          if type(cellid) == 'number' then 
+            self.board[i][j] = Cell.make_cell(cellid)
+          else
+            self.board[i][j] = Cell.make_cell(cellid.val, unpack(cellid.params))
+          end
         end
       end
       self.board[s[1]][s[2]]:enter()
       self.board[s[1]][s[2]]:set_focused(true)
-      print(utils.deep_lisp(self.board))
+      print(utils.deep_lisp(toks))
     else 
       print(err)
     end
@@ -83,137 +89,142 @@ function Board:load(file, num)
   self.height = self.r * Cell.height
 end
 
-function Board:tokenize(string)
+function Board:tokenize(input)
   local ret = {}
+  local err = {}
+  local p = Parser.fromString(input)
 
-  local function str(i)
-    i = i + 1
-    local str = ''
-    local char = string:at(i)
+  local tuple
 
-    while char and char ~= '"' do 
-      if char == '\\' then 
-        i = i + 1
-        char = string:at(i)
-      end
-      str = str .. char
-      i = i + 1
-      char = string:at(i)
+  local function str()
+    local c = p:next()
+    if c ~= '"' then
+      err[#err + 1] = 'In string starting at character ' .. (p.position - 1) .. ': String did not start with a quote'
     end
-    i = i + 1
-    return i, str
+    local ret = p:til('"')
+    p:next()
+    return ret
   end
 
-  local function tuple(i)
-    i = i + 1
-    local tuple = {}
-    local cur = ''
-    local char = string:at(i)
-    local special = false
-
-    while char and char ~= ')' do 
-      if char == '\\' then
-        i = i + 1
-        char = string:at(i)
-        cur = cur .. char
-        i = i + 1
-      elseif char == '"' then 
-        local s
-        i, s = str(i)
-        level[#level + 1] = s
-        special = true
-      elseif char == ',' then
-        if special then 
-          special = false
-        else
-          tuple[#tuple + 1] = tonumber(cur) or 0
+  local function value()
+    local start = p.position - 1
+    if start == 113 then
+      local _ = ''
+    end
+    local val = p:til('",()]')
+    local c = p:get()
+    
+    if c == '"' then
+      if val:trim() ~= '' then
+        err[#err + 1] = 'In value starting at character ' .. start .. ': String was preceded by data "' .. val .. '"'
+      end
+      local s = str()
+      val = p:til(',)]')
+      if val:trim() ~= '' then 
+        err[#err + 1] = 'In value starting at character ' .. start .. ': String was succeeded by data "' .. val .. '"'
+      end
+      if p:get() == nil then
+        err[#err + 1] = 'In value starting at character ' .. start .. ': Unexpected EOF'
+      end
+      return s
+    elseif c == '(' then 
+      local ret = {}
+      if val:trim() ~= '' then
+        local num = tonumber(val)
+        if num == nil then 
+          err[#err + 1] = 'In value starting at character ' .. start .. ': Invalid number'
         end
-        cur = ''
-        i = i + 1
-      elseif char == ' ' or char == '\t' or char == '\n' or char == '\r' then 
-        i = i + 1 
-      else 
-        cur = cur .. char
-        i = i + 1
+        ret.val = num
       end
-      char = string:at(i)
+      ret.params = tuple()
+      val = p:til(',]')
+      if val:trim() ~= '' then 
+        err[#err + 1] = 'In value starting at character ' .. start .. ': Parameters were succeeded by data "' .. val .. '"'
+      end
+      if p:get() == nil then
+        err[#err + 1] = 'In value starting at character ' .. start .. ': Unexpected EOF'
+      end
+      return ret.val and ret or ret.params
+    elseif c == ',' or c == ')' or c == ']' then
+      local num = tonumber(val)
+      if num == nil then 
+        err[#err + 1] = 'In value starting at character ' .. start .. ': Invalid number'
+      end
+      return num    
+    elseif c == nil then 
+      err[#err + 1] = 'In value starting at character ' .. start .. ': Unexpected EOF'
+      return tonumber(val)
     end
-    if special then 
-      special = false
-    else
-      tuple[#tuple + 1] = tonumber(cur) or 0
-    end
-    cur = ''
-    i = i + 1
-    return i, tuple
   end
 
-  local function level(i)
-    i = i + 1
+  function tuple()
+    local start = p.position
+    local ret = ''
+    local tupl = {}
+    
+    local c = p:next()
+    if c ~= '(' then
+      err[#err + 1] = 'In tuple starting at character ' .. start .. ': Tuple did not start with a paren'
+    end
+    
+    while c do
+      tupl[#tupl + 1] = value()
+      c = p:next()
+      if c == ')' then
+        break
+      elseif c == nil then
+        break
+      elseif c ~= ',' then
+        err[#err + 1] = 'In tuple starting at character ' .. start .. ': Invalid separator "' .. c .. '"'
+      end
+    end
+    
+    if c == nil then 
+      err[#err + 1] = 'In tuple starting at character ' .. start .. ': Unexpected EOF'
+    end
+    return tupl
+  end
+
+  local function level()
+    local start = p.position
+    local ret = ''
     local level = {}
-    local cur = ''
-    local char = string:at(i)
-    local special = false
-
-    while char and char ~= ']' do
-      if char == '\\' then 
-        i = i + 1
-        char = string:at(i)
-        cur = cur .. char
-        i = i + 1
-      elseif char == '(' then 
-        local t
-        i, t = tuple(i)
-        level[#level + 1] = t
-        special = true
-      elseif char == '"' then
-        local s
-        i, s = str(i)
-        level[#level + 1] = s
-        special = true
-      elseif char == ' ' or char == '\t' or char == '\n' or char == '\r' then 
-        i = i + 1 
-      elseif char == ',' then
-        if special then 
-          special = false
-        else
-          level[#level + 1] = tonumber(cur) or 0
-        end
-        cur = ''
-        i = i + 1
-      else
-        cur = cur .. char
-        i = i + 1
+    
+    local c = p:next()
+    if c ~= '[' then
+      err[#err + 1] = 'In level starting at character ' .. start .. ': level did not start with a bracket'
+    end
+    
+    while c do
+      level[#level + 1] = value()
+      c = p:next()
+      if c == ']' then
+        break
+      elseif c == nil then
+        break
+      elseif c ~= ',' then
+        err[#err + 1] = 'In level starting at character ' .. start .. ': Invalid separator "' .. c .. '"'
       end
-      char = string:at(i)
     end
-    if special then 
-      special = false
-    else
-      level[#level + 1] = tonumber(cur) or 0
+    
+    if c == nil then 
+      err[#err + 1] = 'In level starting at character ' .. start .. ': Unexpected EOF'
     end
-    cur = ''
-    i = i + 1
-    return i, level
+    return level
   end
   
-  local i = 1
-  local char = string:at(i)
-  while char do
-    if char == '\\' then 
-      i = i + 1
-      char = string:at(i)
-    elseif char == '[' then
-      local l
-      i, l = level(i)
-      ret[#ret + 1] = l
-      char = string:at(i)
-    else
-      i = i + 1
-      char = string:at(i)
+  p:til('[')
+  while not p.finished do 
+    ret[#ret + 1] = level()
+    p:til('[')
+  end
+  
+  if #err then 
+    for k, v in ipairs(err) do
+      print(v)
     end
   end
-
+  
   return ret
 end
 
