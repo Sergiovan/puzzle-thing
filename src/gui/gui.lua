@@ -16,7 +16,7 @@ function Label:_init(x, y, text, font)
   self.x = x
   self.y = y
   self.text = text
-  self.font = font or fonts.default
+  self.font = font or fonts.game
   self.color = {1, 1, 0}
   self.anim = {}
   self._text = love.graphics.newText(self.font, self.text)

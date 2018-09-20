@@ -10,9 +10,15 @@ local WallCell = Cells.WallCell
 
 local Board = utils.make_class()
 
+local board_states = {victory = 'victory', defeat = 'defeat', incomplete = 'incomplete'}
+
+Board.board_states = board_states
+
 function Board:_init(x, y, randomize)
   self.x = x
   self.y = y
+
+  self.updated = false
 
   local err, mess = self:load(randomize and 'random' or '')
   if err then 
@@ -250,6 +256,7 @@ function Board:draw(x, y)
 end
 
 function Board:update(dt)
+  self.updated = false
   local mx, my = input:get_mouse_position()
 
   local cx, cy = self:board_coords(mx, my)
@@ -258,6 +265,8 @@ function Board:update(dt)
   end
 
   -- TODO handle collisions
+  local check_victory = false
+
 
   local fx, fy = unpack(self.focused)
   if math.abs(cx - fx) + math.abs(cy - fy) == 1 then
@@ -267,8 +276,42 @@ function Board:update(dt)
       cell:enter()
       cell:set_focused(true)
       self.focused = {cx, cy}
+      self.updated = true
     end
   end
+end
+
+function Board:getBoardState()
+  local total = 0
+  for i=1, self.c do
+    for j=1, self.r do
+      total = total + self.board[i][j].value
+    end
+  end
+  if total == 0 then
+    return board_states.victory
+  else
+    local n, e, s, w = self:getDirections()
+    if n or e or s or w then 
+      return board_states.incomplete
+    else
+      return board_states.defeat
+    end
+  end
+end
+
+function Board:getDirections()
+  local n, e, s, w = false, false, false, false
+  local fx, fy = unpack(self.focused)
+  local nc = self:at(fx, fy - 1)
+  local ec = self:at(fx + 1, fy)
+  local sc = self:at(fx, fy + 1)
+  local wc = self:at(fx - 1, fy)
+  n = nc and nc:can_enter()
+  e = ec and ec:can_enter()
+  s = sc and sc:can_enter()
+  w = wc and wc:can_enter()
+  return n, e, s, w
 end
 
 return Board
