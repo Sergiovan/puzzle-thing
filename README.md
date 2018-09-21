@@ -17,7 +17,7 @@ Maybe?
 ## TODO
 * [ ] GUI
   * [ ] Text
-    * [ ] Labels
+    * [x] Labels
     * [ ] Input?
   * [ ] Button
   * [ ] “Tabs”?
@@ -38,30 +38,30 @@ Maybe?
       * [ ] Credits?
     * [ ] Graphics
       * [ ] Image loading and storing
-      * [ ] Rendering
+      * [x] Rendering
       * [ ] Shaders?
     * [ ] Menu?
       * [ ] Main menu
       * [ ] Level select
     * [ ] Levels
-      * [ ] Board
-      * [ ] Loading
+      * [x] Board
+      * [x] Loading
       * [ ] Saving?
     * [ ] Sound
     * [ ] “Cutscenes”?
-    * [ ] Animation?
+    * [x] Animation?
   * [ ] Board
-    * [ ] Basic cell
-    * [ ] Obstacle cell
-    * [ ] Player position
+    * [x] Basic cell
+    * [x] Obstacle cell
+    * [x] Player position
     * [ ] More cells?
   * [ ] Control
-    * [ ] Mouse
+    * [x] Mouse
     * [ ] Keyboard?
     * [ ] Controller?
   * [ ] Logic
-    * [ ] Movement
-    * [ ] Winning
+    * [x] Movement
+    * [x] Winning
     * [ ] Losing?
       * [ ] Detect too many dead ends?
     * [ ] Score?
