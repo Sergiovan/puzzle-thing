@@ -4,6 +4,9 @@ local utils = require 'utils.utils'
 local Animator = require 'utils.animator'
 local gui = require 'gui.gui'
 local input = require 'input.input'
+local game = require 'game.game'
+local State = require 'game.state.state'
+local utf8 = require 'utf8'
 
 local Console = utils.make_class()
 
@@ -17,14 +20,22 @@ function Console:_init(dir)
   self.visible = false
   self.moving = false
   
+  self.text_input = gui.TextInput(0, 0, 1, gui.fonts.console)
+  self.text_input.on_return = function (text) 
+    self.text_input:clear() 
+    self:input(text) 
+  end
+  self.text_input.formatting = function(text, position)
+    local toks  = Console.tokenize(text, true)
+    local parts = self:test(toks, true)
+    return Console.formatted(parts, text, position)
+  end
+  
   self:resize()
 
   self.history = {{white, "Type 'help' for help"}}
   self._history = love.graphics.newText(gui.fonts.console)
   self:updateHistory()
-
-  self.text = ''
-  self._text = love.graphics.newText(gui.fonts.console)
 
   self.commands = {}
 
@@ -51,16 +62,13 @@ function Console:_init(dir)
   addCommand('quit', {}, function (params) love.event.quit() return 'Exiting...' end)
   addCommand('exit', {}, self.commands.quit.func)
   addCommand('restart', {}, function (params) love.event.quit('restart') return 'Restarting...' end)
-
-  self.textpos = 1
-  self.lastchar = 0
-  self.cursor = {
-    position = 0,
-    alpha = 1
-  }
-  self.cursor_blink = Animator(self.cursor, {{alpha = Animator.fromToIn(1, 0, 0.5)}, {alpha = Animator.fromToIn(0, 1, 0.5)}}, true, true)
-  self:updateText()
-  
+  addCommand('load', {param_types.string, param_types.number}, 
+    function(params)
+      game:popState()
+      game:addState(State(params[2].val, params[3].val))
+      return 'Level loaded' -- Error reporting during load
+    end)
+  addCommand('fps', {}, function (params) game.show_fps = not game.show_fps return 'FPS counter toggled' end)
 end
 
 function Console:log(text, color)
@@ -68,9 +76,14 @@ function Console:log(text, color)
   self.history[#self.history + 1] = {color, text}
 end
 
+function Console:failure(text)
+  self.history[#self.history + 1] = {command_error, text}
+end
+
 function Console:resize()
   local function stop_open()
     self.moving = false
+    self.text_input.focused = true
   end
 
   local function stop_close()
@@ -96,10 +109,16 @@ function Console:resize()
   self._open = Animator(self, {{[changer] = Animator.fromToIn(from, change, 0.5)}, stop_open})
   self._close = Animator(self, {{[changer] = Animator.fromToIn(change, from, 0.5)}, stop_close})
   self._canvas = love.graphics.newCanvas(self.w, self.h)
+  
+  if self.text_input then
+    self.text_input.w = self.w - (10 + gui.fonts.console:getWidth('> '))
+    self.text_input:resize()
+  end
 
 end
 
 function Console:open()
+  self:updateHistory()
   self._close:terminate()
   self._close:reset()
   self.moving = true
@@ -108,6 +127,7 @@ function Console:open()
 end
 
 function Console:close()
+  self.text_input.focused = false
   self._open:terminate()
   self._open:reset()
   self.moving = true
@@ -118,23 +138,26 @@ function Console:draw()
   if self.visible then
     local font = self._history:getFont()
     local height = font:getHeight()
+    local c = love.graphics.getCanvas()
     love.graphics.setCanvas(self._canvas)
       love.graphics.setColor({0, 0, 0})
       love.graphics.rectangle('fill', 0, 0, self.w, self.h)
       love.graphics.setColor({1, 1, 1})
       love.graphics.rectangle('line', 0, 0, self.w, self.h)
       love.graphics.draw(self._history, 0, 0)
-      love.graphics.draw(self._text, 5, self.h - height - 5)
-      local ctext = '> ' .. self.text:sub(self.textpos, self.textpos + self.cursor.position - 1)
-      love.graphics.setColor({1, 1, 1, self.cursor.alpha})
-      love.graphics.rectangle('fill', 5 + font:getWidth(ctext), self.h - height - 10, 2, height)
-    love.graphics.setCanvas()
+      
+      local off = font:getWidth('> ')
+      love.graphics.setColor({1, 1, 1})
+      self.text_input:draw(off + 5, self.h - height - 5)
+      love.graphics.setFont(font)
+      love.graphics.print('> ', 5, self.h - height - 5)
+    love.graphics.setCanvas(c)
     love.graphics.setColor({1, 1, 1, 0.75})
     love.graphics.draw(self._canvas, self.x, self.y)
   end
 end
 
-function Console:update(dt) -- TODO Fix utf-8
+function Console:update(dt)
   if not self.visible then
     return
   end
@@ -143,98 +166,23 @@ function Console:update(dt) -- TODO Fix utf-8
   if self.moving then 
     return
   end
-  self.cursor_blink:update(dt)
-  self.lastchar = self.lastchar + dt
-  if self.lastchar > 0.5 and not self.cursor_blink.started then
-    self.cursor_blink:start()
-  end
-  local reset_blink = false
-  local update = false
-  if input.text_input and #input.text_input > 0 then
-    reset_blink = true
-    update = true
-    self.text = self.text:sub(1, self.textpos + self.cursor.position - 1) .. input.text_input .. self.text:sub(self.textpos + self.cursor.position)
-    self.cursor.position = self.cursor.position + #input.text_input
-  end
-  if input.keyboard_press['backspace'] then 
-    if self.cursor.position + self.textpos > 1 then 
-      self.text = self.text:sub(1, self.cursor.position + self.textpos - 2) .. self.text:sub(self.cursor.position + self.textpos)
-      self.cursor.position = self.cursor.position - 1
-      reset_blink = true
-      update = true
-    end
-  end
-  if input.keyboard_press['delete'] then
-    if self.cursor.position + self.textpos - 1 < #self.text then 
-      self.text = self.text:sub(1, self.cursor.position + self.textpos - 1) .. self.text:sub(self.cursor.position + self.textpos + 1)
-      reset_blink = true
-      update = true
-    end
-  end
-  if input.keyboard_press['left'] or update then
-    if input.keyboard_press['left'] then 
-      self.cursor.position = self.cursor.position - 1
-    end
-    if self.cursor.position < 0 then
-      if self.textpos ~= 1 then
-        self.textpos = math.max(self.textpos + self.cursor.position, 1)
-        update = true
-      end
-      self.cursor.position = 0
-    end
-    reset_blink = true
-  end
-  if input.keyboard_press['right'] or update then 
-    if input.keyboard_press['right'] then 
-      self.cursor.position = self.cursor.position + 1
-    end
-    local font = self._history:getFont()
-    while self.textpos + self.cursor.position - 1 > #self.text or 
-          font:getWidth(('> ' .. self.text:sub(self.textpos, self.textpos + self.cursor.position - 1))) > self.w - 10 do 
-      self.cursor.position = self.cursor.position - 1
-      if self.textpos + self.cursor.position - 1 < #self.text then 
-        self.textpos = self.textpos + 1
-        update = true
-      end
-    end
-    reset_blink = true
-  end
-  if input.keyboard_press['return'] then 
-    if #self.text > 0 then 
-      self:log(self.text, command_color)
-      self:input(self.text)
-      self.text = ''
-      self:updateHistory()
-      reset_blink = true
-      self.cursor.position = 0
-      self.textpos = 1
-      update = true
-    end
-  end
-  if reset_blink then 
-    self.cursor_blink:reset()
-    self.cursor_blink:stop()
-    self.cursor.alpha = 1
-    self.lastchar = 0
-  end
-  if update then 
-    self:updateText()
-  end
+  self.text_input:update(dt)
 end
 
-function Console:tokenize(text, full)
+function Console.tokenize(text, full)
   full = full or false
   local ret = {}
   local cur = ''
   local i = 1
   local quoted = false
-  while i <= #text do
-    local char = text:at(i) -- string.at exists in extension.lua
-    if not char then 
+  local tlen = utf8.len(text)
+  while i <= tlen do
+    local char = text:utfat(i) -- string.at exists in extension.lua
+    if not char then
       break
-    elseif char == '\\' then
+    elseif char == '\\' and not full then
       i = i + 1
-      cur = cur .. text:at(i)
+      cur = cur .. (text:utfat(i) or '')
       i = i + 1
     elseif (not quoted) and (char == ' ' or char == '\t') then
       while char == ' '  or char == '\t' do
@@ -242,7 +190,7 @@ function Console:tokenize(text, full)
           cur = cur .. char
         end
         i = i + 1
-        char = text:at(i)
+        char = text:utfat(i)
       end
       if #cur > 0 then 
         ret[#ret + 1] = cur
@@ -255,7 +203,7 @@ function Console:tokenize(text, full)
           cur = cur .. char
         end
         i = i + 1
-        char = text:at(i)
+        char = text:utfat(i)
       end
     else
       cur = cur .. char
@@ -373,7 +321,7 @@ function Console:test(tokens, str)
 end
 
 function Console:input(text)
-  local tokens = self:tokenize(self.text)
+  local tokens = Console.tokenize(text)
   local res    = self:test(tokens)
   local name   = res[1]
   if name.stat == correctness.error then 
@@ -390,6 +338,7 @@ function Console:input(text)
       self:log(cres)
     end
   end
+  self:updateHistory()
 end
 
 function Console:updateHistory()
@@ -423,21 +372,20 @@ function Console:updateHistory()
   end
 end
 
-function Console:updateText()
-  local tokens = self:tokenize(self.text, true)
-  local res    = self:test(tokens, true)
-  local printout = {{1, 1, 1}, '> '}
+function Console.formatted(parts, fulltext, textpos)
+  local printout = {}
   local hadhint = false
-  local hidden = self.textpos - 1
-  for k, v in ipairs(res) do
+  local hidden = textpos - 1
+  for k, v in ipairs(parts) do
     local text = v.val
     if #text > 0 then 
+      local textlen = utf8.len(text)
       local willtext = true
-      if #text < hidden then 
-        hidden = hidden - #text
+      if textlen < hidden then 
+        hidden = hidden - textlen
         willtext = false
       elseif hidden ~= 0 then 
-        text = text:sub(hidden + 1)
+        text = text:utfsub(hidden + 1)
         hidden = 0
       end
       if willtext then 
@@ -460,18 +408,19 @@ function Console:updateText()
     if #hint > 0 then 
       if not hadhint then 
         hadhint = true
-        if (self.text:at(-1) ~= ' ' and self.text:at(-1) ~= '\t') and #v.val == 0 then 
+        if (fulltext:utfat(-1) ~= ' ' and fulltext:utfat(-1) ~= '\t') and #v.val == 0 then 
           hint = ' ' .. hint
         end
       else 
         hint = ' ' .. hint
       end
       local willhint = true
-      if #hint < hidden then 
-        hidden = hidden - #hint
+      local hintlen = utf8.len(hint)
+      if hintlen < hidden then 
+        hidden = hidden - hintlen
         willhint = false
       elseif hidden ~= 0 then 
-        hint = hint:sub(hidden + 1)
+        hint = hint:utfsub(hidden + 1)
         hidden = 0
       end
       if willhint then
@@ -480,8 +429,7 @@ function Console:updateText()
       end
     end
   end
-  self._text:clear()
-  self._text:set(printout)
+  return printout
 end
 
 return Console

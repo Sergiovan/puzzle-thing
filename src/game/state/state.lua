@@ -2,12 +2,30 @@
 local utils = require 'utils.utils'
 local Board = require 'game.board.board'
 local gui   = require 'gui.gui'
+local game  = require 'game.game'
 
 State = utils.make_class()
 
-function State:_init()
+function State:_init(file, level)
+  file = file or 'res/levels.txt'
+  level = level or 1
   self.board = Board(50, 50)
-  self.board:load 'res/levels.txt'
+  local err, msg = self.board:load(file, level)
+  
+  if err then
+    if type(err) == 'string' then 
+      game:failure(msg)
+    elseif type(err) == 'table' then
+      for k, v in ipairs(msg) do
+        game:failure('Several errors: ')
+        game:failure(k .. ': ' .. v)
+      end
+    else
+      game:failure(tostring(msg))
+    end
+    self.board:load()
+  end
+  
   self.gui = {}
   self.mouse = nil
 end

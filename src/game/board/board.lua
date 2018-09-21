@@ -4,6 +4,7 @@ local utils = require 'utils.utils'
 local Cells = require 'game.board.cell'
 local input = require 'input.input'
 local Parser = require 'utils.parser'
+local game = require 'game.game'
 
 local Cell = Cells.Cell
 local WallCell = Cells.WallCell
@@ -21,16 +22,12 @@ function Board:_init(x, y, randomize)
   self.updated = false
 
   local err, mess = self:load(randomize and 'random' or '')
-  if err then 
-    print(mess)
-  end
-
 end
 
 -- TODO
 function Board:load(file, num)
   num = num or 1
-  if file == 'randomize' then 
+  if file == 'random' then 
     self.c = 10
     self.r = 10
     self.focused = {1,1}
@@ -60,8 +57,14 @@ function Board:load(file, num)
   else
     local filetext, err = love.filesystem.read(file)
     if filetext then 
-      local toks = self:tokenize(filetext) -- TODO Level handler or something
+      local toks, err = self:tokenize(filetext) -- TODO Level handler or something
+      if not toks then 
+        return true, err
+      end
       local level = toks[num]
+      if type(level) ~= 'table' then
+        return true, "Level " .. num .. ' does not exist in "' .. file .. '", which only has ' .. #toks .. ' levels'
+      end
       local version = level[1]
       -- Ignore version for now
       local w, h, s, n, d = unpack(level, 2, 32)
@@ -69,7 +72,7 @@ function Board:load(file, num)
       self.r = h
       local total = w * h
       if #level < total + 32 then 
-        return false, "Level " .. num .. " only has " .. #level .. " fields when " .. (total + 32) .. " were expected"
+        return true, "Level " .. num .. " only has " .. #level .. " fields when " .. (total + 32) .. " were expected"
       end
       self.focused = s
       self.board = {}
@@ -86,13 +89,13 @@ function Board:load(file, num)
       end
       self.board[s[1]][s[2]]:enter()
       self.board[s[1]][s[2]]:set_focused(true)
-      print(utils.deep_lisp(toks))
     else 
-      print(err)
+      return true, err
     end
   end
   self.width = self.c * Cell.width
   self.height = self.r * Cell.height
+  return false, nil
 end
 
 function Board:tokenize(input)
@@ -225,13 +228,11 @@ function Board:tokenize(input)
     p:til('[')
   end
   
-  if #err then 
-    for k, v in ipairs(err) do
-      print(v)
-    end
+  if #err > 0 then 
+    return nil, err
+  else 
+    return ret
   end
-  
-  return ret
 end
 
 function Board:board_coords(x, y)
@@ -265,9 +266,7 @@ function Board:update(dt)
   end
 
   -- TODO handle collisions
-  local check_victory = false
-
-
+  
   local fx, fy = unpack(self.focused)
   if math.abs(cx - fx) + math.abs(cy - fy) == 1 then
     local cell = self.board[cx][cy]

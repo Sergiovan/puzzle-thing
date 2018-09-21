@@ -9,12 +9,19 @@ local love = love
 local game, input
 
 function love.load(arg)
-  if arg[#arg] == "-debug" then 
-    require("mobdebug").start() 
+  local fps = false
+  for k, v in ipairs(arg) do
+    if v == "-debug" then 
+      require("mobdebug").start() 
+    elseif v == "-showfps" then
+      fps = true
+    end
   end
   
   game  = require 'game.game'
   input = require 'input.input'
+  
+  game.show_fps = fps
   
   love.mouse.setVisible(false)
   love.window.setTitle "Puzzle thing"
