@@ -10,7 +10,7 @@ local utf8 = require 'utf8'
 
 local Console = utils.make_class()
 
-local param_types = {string = {}, number = {}}
+local param_types = {string = {}, number = {}, text = {}, filename = {}}
 local white = {1, 1, 1}
 local command_color = {0.6, 0.6, 0.1}
 local command_error = {1, 0, 0}
@@ -58,11 +58,11 @@ function Console:_init(dir)
     self.commands[name] = {spec = specConvert(spec), func = func}
   end
   
-  addCommand('echo', {param_types.string}, function (params) return params[2].val end)
+  addCommand('echo', {param_types.text}, function (params) return params[2].val end)
   addCommand('quit', {}, function (params) love.event.quit() return 'Exiting...' end)
   addCommand('exit', {}, self.commands.quit.func)
   addCommand('restart', {}, function (params) love.event.quit('restart') return 'Restarting...' end)
-  addCommand('load', {param_types.string, param_types.number}, 
+  addCommand('load', {param_types.filename, param_types.number}, 
     function(params)
       game:popState()
       game:addState(State(params[2].val, params[3].val))
@@ -177,7 +177,7 @@ function Console.tokenize(text, full)
   local quoted = false
   local tlen = utf8.len(text)
   while i <= tlen do
-    local char = text:utfat(i) -- string.at exists in extension.lua
+    local char = text:utfat(i) -- string.utfat exists in extension.lua
     if not char then
       break
     elseif char == '\\' and not full then
@@ -192,7 +192,7 @@ function Console.tokenize(text, full)
         i = i + 1
         char = text:utfat(i)
       end
-      if #cur > 0 then 
+      if #cur:trim() > 0 then 
         ret[#ret + 1] = cur
         cur = ''
       end
@@ -227,7 +227,9 @@ function Console:test(tokens, str)
   local spec = nil
   if #tokens ~= 0 then 
     local command = str and tokens[1]:trim() or tokens[1]
-    if self.commands[command] then
+    if command == '' then
+      return {{val='', hint='', type=token_type.name, stat=correctness.missing}}
+    elseif self.commands[command] then
       obj = self.commands[command]
       spec = obj.spec
       res[#res + 1] = {val=tokens[1], hint='', type=token_type.name, stat=correctness.ok}
@@ -250,7 +252,7 @@ function Console:test(tokens, str)
       end
     end
   else
-    return {val='', hint='<command name>', type=token_type.name, stat=correctness.missing}
+    return {{val='', hint='', type=token_type.name, stat=correctness.missing}}
   end
   
   local i = 1
@@ -265,6 +267,10 @@ function Console:test(tokens, str)
           res[#res + 1] = {val='', hint='<string>', type=token_type.string, stat=correctness.missing}
         elseif cspec == param_types.number then 
           res[#res + 1] = {val='', hint='<number>', type=token_type.number, stat=correctness.missing}
+        elseif cspec == param_types.text then
+          res[#res + 1] = {val='', hint='<text>', type=token_type.string, stat=correctness.missing}
+        elseif cspec == param_types.filename then
+          res[#res + 1] = {val='', hint='<filename>', type=token_type.string, stat=correctness.missing}
         elseif type(cspec) == 'table' then 
           res[#res + 1] = {val='', hint='<' .. table.concat(cspec, '|') .. '>', type=token_type.choice, stat=correctness.missing}
         else
@@ -272,13 +278,57 @@ function Console:test(tokens, str)
         end
       else
         if cspec == param_types.string then 
-          res[#res + 1] = {val=token, hint='', type=token_type.string, stat=correctness.correct}
+          res[#res + 1] = {val=token, hint='', type=token_type.string, stat=correctness.ok}
         elseif cspec == param_types.number then 
           local num = tonumber(token)
           if num == nil then 
             res[#res + 1] = {val=token, hint='', type=token_type.number, stat=correctness.error}
           else
             res[#res + 1] = {val=str and token or num, hint='', type=token_type.number, stat=correctness.ok}
+          end
+        elseif cspec == param_types.text then 
+          res[#res + 1] = {val=table.concat(tokens, str and '' or ' ', i+1), hint='', type=token_type.string, stat=correctness.ok}
+          i = #tokens+1
+        elseif cspec == param_types.filename then 
+          local fullp = {}
+          local cur = {}
+          for p, c in utf8.codes(token) do
+            local char = utf8.char(c)
+            if char == '/' or char == '\\' then
+              fullp[#fullp + 1] = table.concat(cur, '')
+              cur = {}
+            else
+              cur[#cur + 1] = char
+            end
+          end
+          local path = table.concat(fullp, '/')
+          local file = table.concat(cur, '')
+          local fileInfo = love.filesystem.getInfo(path .. '/' .. file)
+          if fileInfo and token:utfat(-1) ~= '/' and token:utfat(-1) ~= '\\' then
+            res[#res + 1] = {val=token, hint=(fileInfo.type ~= 'file' and file:utfat(-1) ~= ' ' and i + 2 > #tokens) and '/' or '', type=token_type.string, stat=correctness.ok}
+          else
+            local files = love.filesystem.getDirectoryItems(path)
+            if not files then
+              res[#res + 1] = {val=token, hint='', type=token_type.string, stat=correctness.error}
+            else
+              local choices = {}
+              local t = str and file:trim() or file
+              for k, v in ipairs(files) do 
+                if #v > #t and v:sub(1, #t) == t then
+                  choices[#choices + 1] = v:sub(#t + 1)
+                end
+              end
+              if #choices == 0 then
+                res[#res + 1] = {val=token, hint='', type=token_type.string, stat=correctness.error}
+              elseif #choices == 1 then
+                fileInfo = love.filesystem.getInfo(token .. choices[1])
+                res[#res + 1] = {val=token, hint=choices[1] .. (fileInfo.type ~= 'file' and '/' or ''), type=token_type.string, stat=correctness.missing}
+              else
+                table.sort(choices)
+                fileInfo = love.filesystem.getInfo(token .. choices[1])
+                res[#res + 1] = {val=token, hint=choices[1] .. (fileInfo.type ~= 'file' and '/' or ''), type=token_type.string, stat=correctness.missing}
+              end
+            end
           end
         elseif type(cspec) == 'table' then
           local choices = {}
