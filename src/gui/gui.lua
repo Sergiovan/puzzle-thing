@@ -27,8 +27,10 @@ end
 function Label:draw(x, y)
   x = x or 0
   y = y or 0
+  local c = {love.graphics.getColor()}
   love.graphics.setColor(self.color)
   love.graphics.draw(self._text, self.x + x, self.y + y)
+  love.graphics.setColor(c)
 end
 
 function Label:update(dt)
