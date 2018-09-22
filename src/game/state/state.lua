@@ -2,9 +2,10 @@
 local utils = require 'utils.utils'
 local Board = require 'game.board.board'
 local gui   = require 'gui.gui'
+local input = require 'input.input'
 local game  = require 'game.game'
 
-State = utils.make_class()
+local State = utils.make_class()
 
 function State:_init(file, level)
   file = file or 'res/levels.txt'
@@ -40,6 +41,9 @@ function State:draw(x, y)
 end
 
 function State:update(dt)
+  if input.keyboard_press['p'] then
+    return true, require('game.state.pause_state')()
+  end
   self.board:update(dt)
   if self.board.updated then 
     local board_state = self.board:getBoardState()
