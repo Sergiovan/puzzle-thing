@@ -16,15 +16,15 @@ Maybe?
 
 ## TODO
 * [ ] GUI
-  * [ ] Text
+  * [x] Text
     * [x] Labels
-    * [ ] Input?
+    * [x] Input?
   * [ ] Button
   * [ ] “Tabs”?
   * [ ] Slider?
   * [ ] Checkbox?
   * [ ] Toggle?
-  * [ ] Console?
+  * [x] Console?
 * [ ] Game
   * [ ] Engine
     * [ ] State
@@ -57,7 +57,7 @@ Maybe?
     * [ ] More cells?
   * [ ] Control
     * [x] Mouse
-    * [ ] Keyboard?
+    * [x] Keyboard?
     * [ ] Controller?
   * [ ] Logic
     * [x] Movement
