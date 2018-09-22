@@ -140,8 +140,7 @@ function Console:draw()
     local height = font:getHeight()
     local c = love.graphics.getCanvas()
     love.graphics.setCanvas(self._canvas)
-      love.graphics.setColor({0, 0, 0})
-      love.graphics.rectangle('fill', 0, 0, self.w, self.h)
+      love.graphics.clear({0, 0, 0})
       love.graphics.setColor({1, 1, 1})
       love.graphics.rectangle('line', 0, 0, self.w, self.h)
       love.graphics.draw(self._history, 0, 0)
@@ -305,11 +304,11 @@ function Console:test(tokens, str)
           local file = table.concat(cur, '')
           local fileInfo = love.filesystem.getInfo(path .. '/' .. file)
           if fileInfo and token:utfat(-1) ~= '/' and token:utfat(-1) ~= '\\' then
-            res[#res + 1] = {val=token, hint=(fileInfo.type ~= 'file' and file:utfat(-1) ~= ' ' and i + 2 > #tokens) and '/' or '', type=token_type.string, stat=correctness.ok}
+            res[#res + 1] = {val=token, hint=(fileInfo.type ~= 'file' and file:utfat(-1) ~= ' ' and i + 2 > #tokens) and '/' or '', type=token_type.choice, stat=correctness.ok}
           else
             local files = love.filesystem.getDirectoryItems(path)
             if not files then
-              res[#res + 1] = {val=token, hint='', type=token_type.string, stat=correctness.error}
+              res[#res + 1] = {val=token, hint='', type=token_type.choice, stat=correctness.error}
             else
               local choices = {}
               local t = str and file:trim() or file
@@ -319,14 +318,14 @@ function Console:test(tokens, str)
                 end
               end
               if #choices == 0 then
-                res[#res + 1] = {val=token, hint='', type=token_type.string, stat=correctness.error}
+                res[#res + 1] = {val=token, hint='', type=token_type.choice, stat=correctness.error}
               elseif #choices == 1 then
                 fileInfo = love.filesystem.getInfo(token .. choices[1])
-                res[#res + 1] = {val=token, hint=choices[1] .. (fileInfo.type ~= 'file' and '/' or ''), type=token_type.string, stat=correctness.missing}
+                res[#res + 1] = {val=token, hint=choices[1] .. (fileInfo.type ~= 'file' and '/' or ''), type=token_type.choice, stat=correctness.missing}
               else
                 table.sort(choices)
                 fileInfo = love.filesystem.getInfo(token .. choices[1])
-                res[#res + 1] = {val=token, hint=choices[1] .. (fileInfo.type ~= 'file' and '/' or ''), type=token_type.string, stat=correctness.missing}
+                res[#res + 1] = {val=token, hint=choices[1] .. (fileInfo.type ~= 'file' and '/' or ''), type=token_type.choice, stat=correctness.missing}
               end
             end
           end
@@ -374,21 +373,31 @@ function Console:input(text)
   local tokens = Console.tokenize(text)
   local res    = self:test(tokens)
   local name   = res[1]
+  local has_error = false
   if name.stat == correctness.error then 
     if #res > 1 then 
       self:log("Error: Incorrect command parameters", command_error)
+      has_error = true
     else
       self:log("Error: Command " .. name.val .. " does not exist", command_error)
+      has_error = true
     end
   elseif name.stat == correctness.missing then 
     self:log("Error: Missing command parameters", command_error)
+    has_error = true
   else
-    local cres = self.commands[name.val].func(res)
-    if cres and type(cres) == 'string' and #cres > 0 then 
-      self:log(cres)
+    local cres
+    cres, has_error = self.commands[name.val].func(res)
+    if cres and type(cres) == 'string' and #cres > 0 then
+      if not has_error then
+        self:log(cres)
+      else
+        self:failure(cres)
+      end
     end
   end
   self:updateHistory()
+  return not has_error
 end
 
 function Console:updateHistory()

@@ -11,6 +11,7 @@ function Game:_init()
 
   self.debug = false
   self.show_fps = false
+  self.mouse = true
 end
 
 function Game:init()
@@ -22,6 +23,12 @@ function Game:init()
 end
 
 function Game:update(dt)
+  if input.mouse_moved then
+    self.mouse = true
+  elseif input.key_pressed then
+    self.mouse = false
+  end
+  
   local change, new = self:state():update(dt)
   if change then
     if new then
@@ -46,14 +53,17 @@ end
 
 function Game:draw()
   self:state():draw(0, 0)
-  local mx, my = input:get_mouse_position()
-  love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.draw(self:state().mouse or self.default_mouse, mx-5, my-5)
 
   self.console:draw()
   if self.show_fps then
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.print("Current FPS: "..tostring(love.timer.getFPS( )), 0, love.graphics.getHeight() - 15)
+  end
+  
+  if self.mouse then 
+    local mx, my = input:get_mouse_position()
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.draw(self:state().mouse or self.default_mouse, mx-5, my-5)
   end
 end
 

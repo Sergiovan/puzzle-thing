@@ -16,6 +16,10 @@ function InputControl:_init()
   self.keyboard_down    = {} -- Keys that are pressed right now
   self.keyboard_press   = {} -- Keys that were pressed this update
   self.keyboard_release = {} -- Keys that were released this update
+  
+  self.mouse_moved  = false
+  self.key_pressed  = false
+  self.key_released = false
 end
 
 function InputControl:update(dt)
@@ -24,6 +28,11 @@ function InputControl:update(dt)
   self.mouse_movement[2] = my - self.mouse_position[2]
   self.mouse_position[1] = mx
   self.mouse_position[2] = my
+  if self.mouse_movement[1] ~= 0 or self.mouse_movement[2] ~= 0 then
+    self.mouse_moved = true
+  else
+    self.mouse_moved = false
+  end
 end
 
 function InputControl:clear(dt)
@@ -41,6 +50,8 @@ function InputControl:clear(dt)
   end
   
   self.text_input = ""
+  self.key_pressed  = false
+  self.key_released = false
 end
 
 function InputControl:mouse_button(button, x, y, press)
@@ -56,6 +67,11 @@ function InputControl:keyboard_button(keycode, press)
   self.keyboard_down[keycode] = press
   local c = press and self.keyboard_press or self.keyboard_release
   c[keycode] = true
+  if press then
+    self.key_pressed = true
+  else
+    self.key_released = true
+  end
 end
 
 function InputControl:add_text_input(text)

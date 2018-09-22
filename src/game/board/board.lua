@@ -20,6 +20,8 @@ function Board:_init(x, y, randomize)
   self.y = y
 
   self.updated = false
+  self.input_buffer = {}
+
 
   local err, mess = self:load(randomize and 'random' or '')
 end
@@ -258,18 +260,47 @@ end
 
 function Board:update(dt)
   self.updated = false
-  local mx, my = input:get_mouse_position()
+  if game.debug then
+    return
+  end
+  local fx, fy = unpack(self.focused)
+  local cx, cy
+  if game.mouse and #self.input_buffer == 0 then
+    local mx, my = input:get_mouse_position()
 
-  local cx, cy = self:board_coords(mx, my)
+    cx, cy = self:board_coords(mx, my)
+  else
+    local dirs = {input.keyboard_press['up'] and 'up' or false, input.keyboard_press['right'] and 'right' or false, 
+                  input.keyboard_press['down'] and 'down' or false, input.keyboard_press['left'] and 'left' or false}
+    local dir = table.remove(self.input_buffer, 1)
+    for k, v in ipairs(dirs) do
+      if v then
+        if dir == nil then
+          dir = v
+        else
+          self.input_buffer[#self.input_buffer + 1] = v
+        end
+      end
+    end
+    if dir == 'up' then
+      cx, cy = fx, fy - 1
+    elseif dir == 'right' then
+      cx, cy = fx + 1, fy
+    elseif dir == 'down' then
+      cx, cy = fx, fy + 1
+    elseif dir == 'left' then
+      cx, cy = fx - 1, fy
+    else
+      cx, cy = nil, nil
+    end
+  end
   if not cx then
     return
   end
 
   -- TODO handle collisions
-  
-  local fx, fy = unpack(self.focused)
   if math.abs(cx - fx) + math.abs(cy - fy) == 1 then
-    local cell = self.board[cx][cy]
+    local cell = self.board[cx] and self.board[cx][cy] or nil
     if cell and cell:can_enter() then
       self.board[fx][fy]:set_focused(false)
       cell:enter()
