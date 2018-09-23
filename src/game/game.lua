@@ -15,11 +15,11 @@ function Game:_init()
 end
 
 function Game:init()
-  local State = require 'game.state.state'
+  local LevelState = require 'game.state.level_state'
   local Console = require 'utils.console'
   
   self.console = Console 'top'
-  self:addState(State())
+  self:addState(LevelState())
 end
 
 function Game:update(dt)
@@ -29,13 +29,19 @@ function Game:update(dt)
     self.mouse = false
   end
   
-  local change, new = self:state():update(dt)
-  if change then
-    if new then
-      self:addState(new)
-    else
-      self:popState()
+  if not self.debug then
+    local change, new = self:state():update(dt)
+    if change then
+      if new then
+        self:addState(new)
+      else
+        self:popState()
+      end
     end
+  end
+  
+  if self.debug or self.console.visible then
+    self.console:update(dt)
   end
 
   if (input.keyboard_down['rctrl'] or input.keyboard_down['lctrl']) and input.keyboard_press['f3'] then
@@ -46,8 +52,6 @@ function Game:update(dt)
       self.console:close()
     end
   end
-
-  self.console:update(dt)
 
 end
 

@@ -7,10 +7,17 @@ local utf8 = require 'utf8'
 local module = {}
 local colors = {}
 colors.default = {1, 1, 1}
+
+local font_size = 36
+local font_size_small = 16
+local font_size_big = 60
+
 local fonts = {}
-fonts.default = love.graphics.newFont(36)
-fonts.console = utils.file_exists 'res/Consolas.ttf' and love.graphics.newFont('res/Consolas.ttf', 16) or fonts.default
-fonts.game    = utils.file_exists 'res/GameFont.ttf' and love.graphics.newFont('res/GameFont.ttf', 60) or fonts.default
+fonts.default = love.graphics.newFont(font_size)
+fonts.default_small = love.graphics.newFont(font_size_small)
+fonts.console = utils.file_exists 'res/Consolas.ttf' and love.graphics.newFont('res/Consolas.ttf', font_size_small) or fonts.default
+fonts.game    = utils.file_exists 'res/GameFont.ttf' and love.graphics.newFont('res/GameFont.ttf', font_size) or fonts.default
+fonts.game_small = utils.file_exists 'res/GameFont.ttf' and love.graphics.newFont('res/GameFont.ttf', font_size_small) or fonts.default_small
 
 local Label = utils.make_class()
 

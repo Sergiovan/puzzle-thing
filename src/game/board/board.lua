@@ -22,7 +22,6 @@ function Board:_init(x, y, randomize)
   self.updated = false
   self.input_buffer = {}
 
-
   local err, mess = self:load(randomize and 'random' or '')
 end
 
@@ -34,15 +33,24 @@ function Board:load(file, num)
     self.r = 10
     self.focused = {1,1}
     self.board = {}
+    self.total = 0
     for i=1, r do
       self.board[i] = {}
       for j=1, c do
         local cell = love.math.random(1,10) == 1 and WallCell or Cell
         self.board[i][j] = cell()
+        self.total = self.total + (cell == Cell and 1 or 0)
       end
     end
     self.board[1][1]:enter()
     self.board[1][1]:set_focused(true)
+    
+    self.name = 'Random Level'
+    self.difficulty = '???'
+    self.filled = 1
+    self.score = self.total * 1000
+    self.time   = self.total * 2 + 10
+    
   elseif not file or #file == 0 then 
     self.c = 10
     self.r = 10
@@ -56,6 +64,14 @@ function Board:load(file, num)
     end
     self.board[1][1]:enter()
     self.board[1][1]:set_focused(true)
+    
+    self.name = 'Default Level'
+    self.difficulty = 1
+    self.total = self.c * self.r
+    self.filled = 1
+    self.score = 0
+    self.time = self.total + 10
+    
   else
     local filetext, err = love.filesystem.read(file)
     if filetext then 
@@ -72,12 +88,15 @@ function Board:load(file, num)
       local w, h, s, n, d = unpack(level, 2, 32)
       self.c = w
       self.r = h
+      self.name = n
+      self.difficulty = d
       local total = w * h
       if #level < total + 32 then 
         return true, "Level " .. num .. " only has " .. #level .. " fields when " .. (total + 32) .. " were expected"
       end
       self.focused = s
       self.board = {}
+      self.total = 0
       for i=1, h do
         self.board[i] = {}
         for j=1, w do
@@ -87,16 +106,23 @@ function Board:load(file, num)
           else
             self.board[i][j] = Cell.make_cell(cellid.val, unpack(cellid.params))
           end
+          self.total = self.total + self.board[i][j].value
         end
       end
       self.board[s[1]][s[2]]:enter()
       self.board[s[1]][s[2]]:set_focused(true)
+      
+      self.filled = 1
+      self.score = self.total * 100 * self.difficulty
+      self.time  = self.total * (1 + 0.1 * self.difficulty) + (10 + 2 * self.difficulty)
+      
     else 
       return true, err
     end
   end
   self.width = self.c * Cell.width
   self.height = self.r * Cell.height
+  self.history = {self.focused}
   return false, nil
 end
 
@@ -302,23 +328,20 @@ function Board:update(dt)
   if math.abs(cx - fx) + math.abs(cy - fy) == 1 then
     local cell = self.board[cx] and self.board[cx][cy] or nil
     if cell and cell:can_enter() then
+      local vbef = cell.value
       self.board[fx][fy]:set_focused(false)
       cell:enter()
       cell:set_focused(true)
       self.focused = {cx, cy}
+      self.filled = self.filled + (vbef - cell.value)
+      self.history[#self.history + 1] = self.focused
       self.updated = true
     end
   end
 end
 
 function Board:getBoardState()
-  local total = 0
-  for i=1, self.c do
-    for j=1, self.r do
-      total = total + self.board[i][j].value
-    end
-  end
-  if total == 0 then
+  if self.total == self.filled then
     return board_states.victory
   else
     local n, e, s, w = self:getDirections()

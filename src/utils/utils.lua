@@ -62,4 +62,19 @@ module.deep_lisp = function(table, depth)
   end
 end
 
+module.to_time_string = function(num)
+  local floor = math.floor
+  local format = string.format
+  local neg = num < 0
+  if neg then
+    num = math.abs(num)
+  end
+  local mins = floor(num / 60.0)
+  num = num - (mins * 60)
+  local secs = floor(num)
+  num = num - secs
+  local millis = num
+  return (neg and '-' or '') .. format("%02d", mins) .. ':' .. format("%02d", secs) .. '.' .. format("%03d", floor(millis * 1000))
+end
+
 return module

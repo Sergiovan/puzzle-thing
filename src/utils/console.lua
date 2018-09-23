@@ -5,7 +5,7 @@ local Animator = require 'utils.animator'
 local gui = require 'gui.gui'
 local input = require 'input.input'
 local game = require 'game.game'
-local State = require 'game.state.state'
+local LevelState = require 'game.state.level_state'
 local utf8 = require 'utf8'
 
 local Console = utils.make_class()
@@ -65,7 +65,7 @@ function Console:_init(dir)
   addCommand('load', {param_types.filename, param_types.number}, 
     function(params)
       game:popState()
-      game:addState(State(params[2].val, params[3].val))
+      game:addState(LevelState(params[2].val, params[3].val))
       return 'Level loaded' -- Error reporting during load
     end)
   addCommand('fps', {}, function (params) game.show_fps = not game.show_fps return 'FPS counter toggled' end)
