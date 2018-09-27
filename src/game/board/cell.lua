@@ -21,10 +21,12 @@ end
 function Cell:draw(x, y)
   x = x or 0
   y = y or 0
+  local c = {love.graphics.getColor()}
   love.graphics.setColor(self.focused and self.focused_border_color or self.border_color[self.value + 1])
   love.graphics.rectangle('fill', x, y, self.width, self.height)
   love.graphics.setColor(self.focused and self.focused_color or self.color[self.value + 1])
   love.graphics.rectangle('fill', 1+x, 1+y, self.width-2, self.height-2)
+  love.graphics.setColor(c)
 end
 
 function Cell:solid()
@@ -56,10 +58,12 @@ end
 function WallCell:draw(x, y)
   x = x or 0
   y = y or 0
+  local c = {love.graphics.getColor()}
   love.graphics.setColor(self.border_color)
   love.graphics.rectangle('fill', x, y, self.width, self.height)
   love.graphics.setColor(self.color)
   love.graphics.rectangle('fill', 1+x, 1+y, self.width-2, self.height-2)
+  love.graphics.setColor(c)
 end
 
 Cell.id_to_cell = {

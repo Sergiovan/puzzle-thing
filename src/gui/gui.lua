@@ -212,9 +212,161 @@ function TextInput:clear()
   self:updateText()
 end
 
+local Button = utils.make_class()
+
+function Button:_init(x, y, callback, callback_args, options)
+  self.x = x
+  self.y = y
+  self.callback = callback
+  self.callback_args = callback_args
+  
+  self.text = options.text
+  
+  self.toggle = options.toggle or false
+  if self.toggle then
+    if type(options.inverse_callback) == "function" and type(options.inverse_callback_args) == "table" then
+      self.inverse_callback = options.inverse_callback
+      self.inverse_callback_args = options.inverse_callback_args
+    else
+      error("Toggle button must contain inverse_callback and inverse_callback_args.")
+    end
+  end
+  
+  self.previous_state = "normal"
+  self.state = "normal"
+  self.updates_since_click = 0
+
+  -- Text button
+  self.font = options.font or fonts.game
+
+  -- Image button
+  self.image = options.image
+
+  local text_color = options.text_color or {1, 1, 1}
+  local background_color = options.background_color or {1, 1, 1, 0}
+  local border_color = options.border_color or {1, 1, 1, 0}
+
+  self.colors = {
+    normal = {
+      text = text_color,
+      background = background_color,
+      border = border_color,
+    },
+    focused = {
+      text = options.focused_text_color or text_color,
+      background = options.focused_background_color or background_color,
+      border = options.focused_border_color or border_color,
+    },
+    held = {
+      text = options.held_text_color or text_color,
+      background = options.held_background_color or background_color,
+      border = options.focused_border_color or border_color,
+    },
+    clicked = {
+      text = options.clicked_text_color or text_color,
+      background = options.clicked_background_color or background_color,
+      border = options.clicked_border_color or border_color,
+    },
+  }
+  
+  self.corner_radius = options.corner_radius or 0
+
+  if self.image ~= nil then
+    self._drawable = love.graphics.newImage(self.image)
+  else
+    self._drawable = love.graphics.newText(self.font, self.text)
+  end
+
+  if type(options.width) == "number" and type(options.height) == "number" then
+    self.width, self.height = options.width, options.height
+  elseif (self.text ~= nil and self.text:match("%S+")) or self.image ~= nil then
+      self.width, self.height = self._drawable:getDimensions()
+  else
+    error("Width and height required for empty/whitespace-only string.")
+  end
+end
+
+function Button:draw()
+  local text_color = self.colors[self.state].text
+  local background_color = self.colors[self.state].background
+  local border_color = self.colors[self.state].border
+
+  local c = {love.graphics.getColor()}
+  love.graphics.setColor(background_color)
+  love.graphics.rectangle("fill", self.x, self.y, self.width, self.height, self.corner_radius)
+  love.graphics.setColor(border_color)
+  love.graphics.rectangle("line", self.x, self.y, self.width, self.height, self.corner_radius)
+  love.graphics.setColor(text_color)
+  love.graphics.draw(self._drawable, self.x, self.y)
+  love.graphics.setColor(c)
+end
+
+function Button:normal()
+  self.state = "normal"
+end
+
+function Button:focus()
+  self.state = "focused"
+end
+
+function Button:unhold()
+  self.state = self.previous_state
+end
+
+function Button:hold()
+  if self.state ~= "held" then self.previous_state = self.state end
+  self.state = "held"
+end
+
+function Button:click()
+  if self.toggle then
+    if self.state == "clicked" then
+      self.state = "normal"
+      self.inverse_callback(unpack(self.inverse_callback_args))
+    else
+      self.state = "clicked"
+      self.callback(unpack(self.callback_args))
+    end
+  else
+    self.state = "clicked"
+    self.callback(unpack(self.callback_args))
+  end
+end
+
+function Button:update(dt)
+  local mx, my = input:get_mouse_position()
+  if self.x <= mx and mx <= self.x + self.width and self.y <= my and my <= self.y + self.height then
+    if not (input.mouse_press[1] or input.mouse_down[1]) and self.updates_since_click == 0 then
+      if self.state ~= "clicked" then
+        self:focus()
+      end
+    else
+      self.updates_since_click = self.updates_since_click + 1
+      if self.updates_since_click <= 10 then
+        if input.mouse_release[1] then
+          self:click()
+          self.updates_since_click = 0
+        end
+      else
+        if input.mouse_down[1] then
+          self:hold()
+        else
+          self:normal()
+          self.updates_since_click = 0
+        end
+      end
+    end
+  elseif not input.mouse_down[1] then
+    if self.state ~= "clicked" then
+      self:unhold()
+      self.updates_since_click = 0
+    end
+  end
+end
 module.colors = colors
 module.fonts = fonts
 module.Label = Label
 module.TextInput = TextInput
+module.Button = Button
 
 return module
