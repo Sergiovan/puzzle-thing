@@ -51,7 +51,7 @@ function GObject:_resize()
   -- Default does nothing
 end
 
-function GObject:move(x, y)
+function GObject:change_offset(x, y)
   self._x_offset = self._x_offset + x
   self._y_offset = self._y_offset + y
 end

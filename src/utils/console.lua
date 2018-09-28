@@ -15,6 +15,9 @@ local white = {1, 1, 1}
 local command_color = {0.6, 0.6, 0.1}
 local command_error = {1, 0, 0}
 
+local token_type = {name={}, string={}, number={}, choice={}, none={}}
+local correctness = {ok={}, hint_only={}, missing={}, error={}} 
+
 function Console:_init(dir)
   self.position = dir or 'right'
   self.visible = false
@@ -165,6 +168,17 @@ function Console:_update(dt, x, y)
   if self.moving then 
     return
   end
+  if input.keyboard_press['tab'] then
+    local toks = Console.tokenize(self.text_input.text, true)
+    toks = self:test(toks, true)
+    for i=1,#toks do
+      local tok = toks[i]
+      if tok.hint ~= nil and tok.hint ~= '' and tok.stat ~= correctness.hint_only then
+        self.text_input:addText(tok.hint)
+        break
+      end
+    end
+  end
   self.text_input:update(dt, x, y)
 end
 
@@ -216,9 +230,6 @@ function Console.tokenize(text, full)
   return ret
 end
 
-local token_type = {name={}, string={}, number={}, choice={}, none={}}
-local correctness = {ok={}, missing={}, error={}} 
-
 function Console:test(tokens, str) 
   str = str or false
   local res = {}
@@ -263,17 +274,17 @@ function Console:test(tokens, str)
     else
       if token == nil then 
         if cspec == param_types.string then 
-          res[#res + 1] = {val='', hint='<string>', type=token_type.string, stat=correctness.missing}
+          res[#res + 1] = {val='', hint='<string>', type=token_type.string, stat=correctness.hint_only}
         elseif cspec == param_types.number then 
-          res[#res + 1] = {val='', hint='<number>', type=token_type.number, stat=correctness.missing}
+          res[#res + 1] = {val='', hint='<number>', type=token_type.number, stat=correctness.hint_only}
         elseif cspec == param_types.text then
-          res[#res + 1] = {val='', hint='<text>', type=token_type.string, stat=correctness.missing}
+          res[#res + 1] = {val='', hint='<text>', type=token_type.string, stat=correctness.hint_only}
         elseif cspec == param_types.filename then
-          res[#res + 1] = {val='', hint='<filename>', type=token_type.string, stat=correctness.missing}
+          res[#res + 1] = {val='', hint='<filename>', type=token_type.string, stat=correctness.hint_only}
         elseif type(cspec) == 'table' then 
-          res[#res + 1] = {val='', hint='<' .. table.concat(cspec, '|') .. '>', type=token_type.choice, stat=correctness.missing}
+          res[#res + 1] = {val='', hint='<' .. table.concat(cspec, '|') .. '>', type=token_type.choice, stat=correctness.hint_only}
         else
-          res[#res + 1] = last .. {val='', hint='<????>', type=token_type.none, stat=correctness.missing}
+          res[#res + 1] = last .. {val='', hint='<????>', type=token_type.none, stat=correctness.hint_only}
         end
       else
         if cspec == param_types.string then 
@@ -349,7 +360,7 @@ function Console:test(tokens, str)
             res[#res + 1] = {val=token, hint=choices[1], type=token_type.choice, stat=correctness.missing}
           end
         else
-          res[#res + 1] = last .. {val='', hint='<????>', type=token_type.none, stat=correctness.missing}
+          res[#res + 1] = last .. {val='', hint='<????>', type=token_type.none, stat=correctness.hint_only}
         end
       end
     end

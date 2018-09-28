@@ -68,6 +68,7 @@ function TextInput:_init(x, y, w, font)
   self.h = font:getHeight() + 2
   
   self.text = ''
+  self.text_buffer = ''
   self._text = love.graphics.newText(font)
   
   self.textpos = 1
@@ -116,7 +117,14 @@ function TextInput:_update(dt, x, y)
   local reset_blink = false
   local update = false
   
-  if input.text_input and #input.text_input > 0 then
+  if #self.text_buffer > 0 then
+    reset_blink = true
+    update = true
+    self.text = self:beforeCursor() .. self.text_buffer .. self:afterCursor()
+    self.cursor.position = self.cursor.position + utf8.len(self.text_buffer)
+    self.text_buffer = ''
+  end
+  if input.text_input and #input.text_input > 0 then -- This is repeated twice but I don't want to call an anonymous function...
     reset_blink = true
     update = true
     self.text = self:beforeCursor() .. input.text_input .. self:afterCursor()
@@ -177,6 +185,10 @@ function TextInput:_update(dt, x, y)
   if update then
     self:updateText()
   end
+end
+
+function TextInput:addText(text)
+  self.text_buffer = self.text_buffer .. text
 end
 
 function TextInput:beforeCursor()
