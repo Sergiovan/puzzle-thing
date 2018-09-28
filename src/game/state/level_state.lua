@@ -32,20 +32,19 @@ function LevelState:_init(file, level)
   end
   
   self.gui = {}
+  self.ui_background = {0, 0, 0.25}
   self.timer = -3
   self.mouse = nil
   self.done = false
 end
 
-function LevelState:draw(x, y)
-  x = x or 0
-  y = y or 0
+function LevelState:draw()
   local h = self.text_height
   
-  self.board:draw(x, y)
+  self.board:draw()
   
   local c = {love.graphics.getColor()}
-  love.graphics.setColor({0, 0.25, 0})
+  love.graphics.setColor(self.ui_background)
   love.graphics.rectangle('fill', 0, 0, love.graphics.getWidth(), h)
   love.graphics.setColor({1, 1, 1})
   love.graphics.rectangle('line', 0, 0, love.graphics.getWidth(), h)
@@ -53,7 +52,7 @@ function LevelState:draw(x, y)
   love.graphics.setColor(c)
   
   for k, v in pairs(self.gui) do
-    v:draw(x, y)
+    v:draw()
   end
 end
 
@@ -68,11 +67,11 @@ function LevelState:update(dt)
     end
     local board_state = self.board:getBoardState()
     if board_state == Board.board_states.victory then
-      -- self.gui[#self.gui + 1] = gui.Label(10, 10, "Winner winner dine whatever you want!")
+      self.ui_background = {0, 0.25, 0}
       self:updateText(dt)
       self.done = true
     elseif board_state == Board.board_states.defeat then 
-      -- self.gui[#self.gui + 1] = gui.Label(10, 10, "Oops...")
+      self.ui_background = {0.25, 0, 0}
     end
   end
   for k, v in ipairs(self.gui) do

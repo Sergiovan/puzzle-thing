@@ -19,8 +19,6 @@ function Cell:_init()
 end
 
 function Cell:draw(x, y)
-  x = x or 0
-  y = y or 0
   local c = {love.graphics.getColor()}
   love.graphics.setColor(self.focused and self.focused_border_color or self.border_color[self.value + 1])
   love.graphics.rectangle('fill', x, y, self.width, self.height)
@@ -56,8 +54,6 @@ function WallCell:_init()
 end
 
 function WallCell:draw(x, y)
-  x = x or 0
-  y = y or 0
   local c = {love.graphics.getColor()}
   love.graphics.setColor(self.border_color)
   love.graphics.rectangle('fill', x, y, self.width, self.height)

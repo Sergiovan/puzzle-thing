@@ -1,6 +1,6 @@
 -- utils/console.lua
 
-local utils = require 'utils.utils'
+local make_gobject = require 'abstract.gobject'
 local Animator = require 'utils.animator'
 local gui = require 'gui.gui'
 local input = require 'input.input'
@@ -8,7 +8,7 @@ local game = require 'game.game'
 local LevelState = require 'game.state.level_state'
 local utf8 = require 'utf8'
 
-local Console = utils.make_class()
+local Console = make_gobject()
 
 local param_types = {string = {}, number = {}, text = {}, filename = {}}
 local white = {1, 1, 1}
@@ -80,7 +80,7 @@ function Console:failure(text)
   self.history[#self.history + 1] = {command_error, text}
 end
 
-function Console:resize()
+function Console:_resize()
   local function stop_open()
     self.moving = false
     self.text_input.focused = true
@@ -134,7 +134,7 @@ function Console:close()
   self._close:start()
 end
 
-function Console:draw()
+function Console:_draw(x, y)
   if self.visible then
     local font = self._history:getFont()
     local height = font:getHeight()
@@ -152,11 +152,11 @@ function Console:draw()
       love.graphics.print('> ', 5, self.h - height - 5)
     love.graphics.setCanvas(c)
     love.graphics.setColor({1, 1, 1, 0.75})
-    love.graphics.draw(self._canvas, self.x, self.y)
+    love.graphics.draw(self._canvas, self.x + x, self.y + y)
   end
 end
 
-function Console:update(dt)
+function Console:_update(dt, x, y)
   if not self.visible then
     return
   end
@@ -165,7 +165,7 @@ function Console:update(dt)
   if self.moving then 
     return
   end
-  self.text_input:update(dt)
+  self.text_input:update(dt, x, y)
 end
 
 function Console.tokenize(text, full)

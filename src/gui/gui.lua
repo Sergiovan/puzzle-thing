@@ -1,5 +1,7 @@
 -- gui/gui.lua
+
 local utils = require 'utils.utils'
+local make_gobject = require 'abstract.gobject'
 local input = require 'input.input'
 local Animator = require 'utils.animator'
 local utf8 = require 'utf8'
@@ -19,7 +21,7 @@ fonts.console = utils.file_exists 'res/Consolas.ttf' and love.graphics.newFont('
 fonts.game    = utils.file_exists 'res/GameFont.ttf' and love.graphics.newFont('res/GameFont.ttf', font_size) or fonts.default
 fonts.game_small = utils.file_exists 'res/GameFont.ttf' and love.graphics.newFont('res/GameFont.ttf', font_size_small) or fonts.default_small
 
-local Label = utils.make_class()
+local Label = make_gobject()
 
 function Label:_init(x, y, text, font)
   self.x = x
@@ -31,16 +33,12 @@ function Label:_init(x, y, text, font)
   self._text = love.graphics.newText(self.font, self.text)
 end
 
-function Label:draw(x, y)
-  x = x or 0
-  y = y or 0
-  local c = {love.graphics.getColor()}
+function Label:_draw(x, y)
   love.graphics.setColor(self.color)
   love.graphics.draw(self._text, self.x + x, self.y + y)
-  love.graphics.setColor(c)
 end
 
-function Label:update(dt)
+function Label:_update(dt, x, y)
   for k, v in ipairs(self.anim) do
     v:update(dt)
   end
@@ -59,7 +57,7 @@ function Label:appendText(text)
   self._text:add(self.text)
 end
 
-local TextInput = utils.make_class()
+local TextInput = make_gobject()
 
 function TextInput:_init(x, y, w, font)
   self.x = x
@@ -86,13 +84,11 @@ function TextInput:_init(x, y, w, font)
   self._canvas = love.graphics.newCanvas(self.w, self.h)
 end
 
-function TextInput:resize()
+function TextInput:_resize()
   self._canvas = love.graphics.newCanvas(self.w, self.h)
 end
 
-function TextInput:draw(x, y)
-  x = x or 0
-  y = y or 0
+function TextInput:_draw(x, y)
   local c = love.graphics.getCanvas()
   local font = self.font
   love.graphics.setCanvas(self._canvas)
@@ -107,7 +103,7 @@ function TextInput:draw(x, y)
   love.graphics.draw(self._canvas, self.x + x, self.y + y)
 end
 
-function TextInput:update(dt)
+function TextInput:_update(dt, x, y)
   if not self.focused then
     return
   end
@@ -212,28 +208,28 @@ function TextInput:clear()
   self:updateText()
 end
 
-local Button = utils.make_class()
+local Button = make_gobject()
 
-function Button:_init(x, y, callback, callback_args, options)
+Button.states = {normal = "normal", focused = "focused", held = "held", clicked = "clicked"}
+
+function Button:_init(x, y, callback, options)
   self.x = x
   self.y = y
   self.callback = callback
-  self.callback_args = callback_args
   
   self.text = options.text
   
   self.toggle = options.toggle or false
   if self.toggle then
-    if type(options.inverse_callback) == "function" and type(options.inverse_callback_args) == "table" then
+    if type(options.inverse_callback) == "function" then
       self.inverse_callback = options.inverse_callback
-      self.inverse_callback_args = options.inverse_callback_args
     else
-      error("Toggle button must contain inverse_callback and inverse_callback_args.")
+      error("Toggle button must contain inverse_callback.")
     end
   end
   
-  self.previous_state = "normal"
-  self.state = "normal"
+  self.previous_state = Button.states.normal
+  self.state = Button.states.normal
   self.updates_since_click = 0
 
   -- Text button
@@ -273,40 +269,42 @@ function Button:_init(x, y, callback, callback_args, options)
 
   if self.image ~= nil then
     self._drawable = love.graphics.newImage(self.image)
-  else
+  elseif self.text ~= nil and self.text:trim() ~= '' then
     self._drawable = love.graphics.newText(self.font, self.text)
+  else
+    self._drawable = nil
   end
 
   if type(options.width) == "number" and type(options.height) == "number" then
     self.width, self.height = options.width, options.height
   elseif (self.text ~= nil and self.text:match("%S+")) or self.image ~= nil then
-      self.width, self.height = self._drawable:getDimensions()
+    self.width, self.height = self._drawable:getDimensions()
   else
     error("Width and height required for empty/whitespace-only string.")
   end
 end
 
-function Button:draw()
+function Button:_draw(x, y)
   local text_color = self.colors[self.state].text
   local background_color = self.colors[self.state].background
   local border_color = self.colors[self.state].border
 
-  local c = {love.graphics.getColor()}
   love.graphics.setColor(background_color)
-  love.graphics.rectangle("fill", self.x, self.y, self.width, self.height, self.corner_radius)
+  love.graphics.rectangle("fill", self.x + x, self.y + y, self.width, self.height, self.corner_radius)
   love.graphics.setColor(border_color)
-  love.graphics.rectangle("line", self.x, self.y, self.width, self.height, self.corner_radius)
-  love.graphics.setColor(text_color)
-  love.graphics.draw(self._drawable, self.x, self.y)
-  love.graphics.setColor(c)
+  love.graphics.rectangle("line", self.x + x, self.y + y, self.width, self.height, self.corner_radius)
+  if self._drawable then
+    love.graphics.setColor(text_color)
+    love.graphics.draw(self._drawable, self.x + x, self.y + y)
+  end
 end
 
 function Button:normal()
-  self.state = "normal"
+  self.state = Button.states.normal
 end
 
 function Button:focus()
-  self.state = "focused"
+  self.state = Button.states.focused
 end
 
 function Button:unhold()
@@ -314,30 +312,34 @@ function Button:unhold()
 end
 
 function Button:hold()
-  if self.state ~= "held" then self.previous_state = self.state end
-  self.state = "held"
+  if self.state ~= Button.states.held then 
+    self.previous_state = self.state 
+  end
+  self.state = Button.states.held
 end
 
 function Button:click()
   if self.toggle then
-    if self.state == "clicked" then
-      self.state = "normal"
-      self.inverse_callback(unpack(self.inverse_callback_args))
+    if self.state == Button.states.clicked then
+      self.state = Button.states.normal
+      self.inverse_callback()
     else
-      self.state = "clicked"
-      self.callback(unpack(self.callback_args))
+      self.state = Button.states.clicked
+      self.callback()
     end
   else
-    self.state = "clicked"
-    self.callback(unpack(self.callback_args))
+    self.state = Button.states.clicked
+    self.callback()
   end
 end
 
-function Button:update(dt)
+function Button:_update(dt, x, y)
   local mx, my = input:get_mouse_position()
+  mx = mx - x
+  my = my - y
   if self.x <= mx and mx <= self.x + self.width and self.y <= my and my <= self.y + self.height then
     if not (input.mouse_press[1] or input.mouse_down[1]) and self.updates_since_click == 0 then
-      if self.state ~= "clicked" then
+      if self.state ~= Button.states.clicked then
         self:focus()
       end
     else
@@ -357,12 +359,13 @@ function Button:update(dt)
       end
     end
   elseif not input.mouse_down[1] then
-    if self.state ~= "clicked" then
+    if self.state ~= Button.states.clicked then
       self:unhold()
       self.updates_since_click = 0
     end
   end
 end
+
 module.colors = colors
 module.fonts = fonts
 module.Label = Label

@@ -56,12 +56,14 @@ function Game:update(dt)
 end
 
 function Game:draw()
-  self:state():draw(0, 0)
+  local gui = require 'gui.gui'
+  self:state():draw()
 
   self.console:draw()
   if self.show_fps then
+    love.graphics.setFont(gui.fonts.console)
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.print("Current FPS: "..tostring(love.timer.getFPS( )), 0, love.graphics.getHeight() - 15)
+    love.graphics.print("Current FPS: "..tostring(love.timer.getFPS()), 0, love.graphics.getHeight() - 15)
   end
   
   if self.mouse then 
@@ -76,7 +78,7 @@ function Game:state()
 end
 
 function Game:addState(state)
-  table.insert(self.states, state)
+  self.states[#self.states + 1] = state
 end
 
 function Game:popState()

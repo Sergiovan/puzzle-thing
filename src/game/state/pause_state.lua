@@ -100,7 +100,7 @@ function PauseState:draw()
   --love.graphics.draw(self.canvas_debug, 0, 0)
 end
 
-function PauseState:update()
+function PauseState:update(dt)
   if input.keyboard_press['p'] then
     --love.window.setMode(love.graphics.getWidth() / 2, love.graphics.getHeight())
     return true

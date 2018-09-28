@@ -56,11 +56,6 @@ end
 
 function InputControl:mouse_button(button, x, y, press)
   -- Note: Button should be in the range 1:3
-  if press then
-    self.mouse_press[button] = true
-  else
-    self.mouse_release[button] = true
-  end
   self.mouse_down[button] = press
   local c = press and self.mouse_press or self.mouse_release
   c[button] = true

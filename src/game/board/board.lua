@@ -1,6 +1,6 @@
 -- game/board/board.lua
 
-local utils = require 'utils.utils'
+local make_gobject = require 'abstract.gobject'
 local Cells = require 'game.board.cell'
 local input = require 'input.input'
 local Parser = require 'utils.parser'
@@ -9,7 +9,7 @@ local game = require 'game.game'
 local Cell = Cells.Cell
 local WallCell = Cells.WallCell
 
-local Board = utils.make_class()
+local Board = make_gobject()
 
 local board_states = {victory = 'victory', defeat = 'defeat', incomplete = 'incomplete'}
 
@@ -25,7 +25,6 @@ function Board:_init(x, y, randomize)
   local err, mess = self:load(randomize and 'random' or '')
 end
 
--- TODO
 function Board:load(file, num)
   num = num or 1
   if file == 'random' then 
@@ -264,19 +263,19 @@ function Board:tokenize(input)
 end
 
 function Board:board_coords(x, y)
-  if x < self.x or x >= self.x + self.width or y < self.y or y >= self.y + self.height then
+  x = x - (self.x + self._x_offset)
+  y = y - (self.y + self._y_offset)
+  if x <= 0 or x >= self.width or y <= 0 or y >= self.height then
     return nil, nil
   end
-  return math.floor((x - self.x)/50) + 1, math.floor((y - self.y)/50) + 1
+  return math.floor(x/Cell.width) + 1, math.floor(y/Cell.height) + 1
 end
 
 function Board:at(x, y)
   return self.board[x] and self.board[x][y] or nil
 end
 
-function Board:draw(x, y)
-  x = x or 0
-  y = y or 0
+function Board:_draw(x, y)
   for i=1, self.c do
     for j=1, self.r do
       self.board[i][j]:draw(x + self.x + (i-1) * Cell.width, y + self.y + (j-1) * Cell.height)
@@ -284,7 +283,7 @@ function Board:draw(x, y)
   end
 end
 
-function Board:update(dt)
+function Board:_update(dt, x, y)
   self.updated = false
   if game.debug then
     return
@@ -293,7 +292,8 @@ function Board:update(dt)
   local cx, cy
   if game.mouse and #self.input_buffer == 0 then
     local mx, my = input:get_mouse_position()
-
+    mx = mx + x
+    my = my + y
     cx, cy = self:board_coords(mx, my)
   else
     local dirs = {input.keyboard_press['up'] and 'up' or false, input.keyboard_press['right'] and 'right' or false, 
