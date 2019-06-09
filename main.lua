@@ -11,8 +11,8 @@ local game, input
 function love.load(arg)
   local fps = false
   for k, v in ipairs(arg) do
-    if v == "-debug" then 
-      require("mobdebug").start() 
+    if v == "-debug" then
+      require("mobdebug").start()
     elseif v == "-showfps" then
       fps = true
     end

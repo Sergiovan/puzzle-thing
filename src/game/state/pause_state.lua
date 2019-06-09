@@ -6,6 +6,7 @@ local game  = require 'game.game'
 
 local PauseState = utils.make_class()
 
+--- Shader
 local shader_code = [[
   extern vec3 rand;
   extern number width;
@@ -59,14 +60,14 @@ local debug_shader_code = [[
 local pause_shader = love.graphics.newShader(shader_code)
 
 function PauseState:_init()
-  self.prev_canvas = nil
-  self.canvas = love.graphics.newCanvas()
+  self.prev_canvas = nil -- Previous canvas. Needed for fancy shader shenanigans
+  self.canvas = love.graphics.newCanvas() -- Current canvas to draw on
   --self.canvas_debug = love.graphics.newCanvas()
   self.text = gui.Label(0, 0, 'PAUSED')
 end
 
 function PauseState:draw()
-  if self.prev_canvas == nil then
+  if self.prev_canvas == nil then -- Set up canvas
     self.prev_canvas = love.graphics.newCanvas()
     --love.window.setMode(love.graphics.getWidth() * 2, love.graphics.getHeight())
     local c = love.graphics.getCanvas()
@@ -79,18 +80,18 @@ function PauseState:draw()
     pause_shader:send('height', h)
   end
   local rand = {math.random() * 2 - 1, math.random() * 2 - 1, math.random() * 2 - 1}
-  pause_shader:send('rand', rand)
+  pause_shader:send('rand', rand) -- Random number to randomize visuals
   local s = love.graphics.getShader()
   local c = love.graphics.getCanvas()
   love.graphics.setColor({1, 1, 1, 1})
   love.graphics.setCanvas(self.canvas)
     love.graphics.clear({0, 0, 0, 1})
     love.graphics.setShader(pause_shader)
-    love.graphics.draw(self.prev_canvas)
+    love.graphics.draw(self.prev_canvas) -- Draw previous canvas to canvas
     love.graphics.setColor({1, 1, 1, 1})
     love.graphics.setShader(s)
   love.graphics.setCanvas(self.prev_canvas)
-    love.graphics.draw(self.canvas)
+    love.graphics.draw(self.canvas) -- And then draw the current canvas onto the old one
     pause_shader:send('prev', self.prev_canvas)
   love.graphics.setCanvas(self.canvas)
     self.text:draw()
@@ -100,6 +101,7 @@ function PauseState:draw()
   --love.graphics.draw(self.canvas_debug, 0, 0)
 end
 
+--- Update pause state. Simply unpauses when P is pressed
 function PauseState:update(dt)
   if input.keyboard_press['p'] then
     --love.window.setMode(love.graphics.getWidth() / 2, love.graphics.getHeight())

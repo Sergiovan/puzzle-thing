@@ -7,17 +7,18 @@ local game  = require 'game.game'
 
 local LevelState = utils.make_class()
 
+--- Initializes level number `level` from file `file`
 function LevelState:_init(file, level)
   file = file or 'res/levels.txt'
   level = level or 1
   
-  self.text = love.graphics.newText(gui.fonts.game_small)
-  self.text_height = gui.fonts.game_small:getHeight() * 2 + 15
+  self.text = love.graphics.newText(gui.fonts.game_small) -- Top of the screen has cool-beans text
+  self.text_height = gui.fonts.game_small:getHeight() * 2 + 15 -- Space needed for text canvas
   
-  self.board = Board(50, 50 + self.text_height)
-  local err, msg = self.board:load(file, level)
+  self.board = Board(50, 50 + self.text_height) -- Actual board, account for UI height
+  local err, msg = self.board:load(file, level) -- Load from file
   
-  if err then
+  if err then -- Could not load, yo
     if type(err) == 'string' then 
       game:failure(msg)
     elseif type(err) == 'table' then
@@ -28,21 +29,23 @@ function LevelState:_init(file, level)
     else
       game:failure(tostring(msg))
     end
-    self.board:load()
+    self.board:load() -- Load default level
   end
   
-  self.gui = {}
+  self.gui = {} -- All gui elements
   self.ui_background = {0, 0, 0.25}
-  self.timer = -3
-  self.mouse = nil
-  self.done = false
+  self.timer = -3 -- Seconds elapsed in current level
+  self.mouse = nil -- Nothing?
+  self.done = false -- If the level has finished
 end
 
+--- Render state
 function LevelState:draw()
   local h = self.text_height
   
-  self.board:draw()
+  self.board:draw() -- Draw the board first
   
+  -- TODO Draw on canvas?
   local c = {love.graphics.getColor()}
   love.graphics.setColor(self.ui_background)
   love.graphics.rectangle('fill', 0, 0, love.graphics.getWidth(), h)
@@ -56,30 +59,32 @@ function LevelState:draw()
   end
 end
 
+--- Update state
 function LevelState:update(dt)
-  if input.keyboard_press['p'] then
-    return true, require('game.state.pause_state')()
+  if input.keyboard_press['p'] then -- Pause as shit
+    return true, require('game.state.pause_state')() -- This is hilarious
   end
-  self.board:update(dt)
-  if self.board.updated then
+  self.board:update(dt) -- Update the state of the board, of course
+  if self.board.updated then -- Board has changed
     if self.timer < 0 then
-      self.timer = 0 - dt
+      self.timer = 0 - dt -- Set timer to 0 if it was negative, we have started
     end
     local board_state = self.board:getBoardState()
-    if board_state == Board.board_states.victory then
+    if board_state == Board.board_states.victory then -- We are victorious
       self.ui_background = {0, 0.25, 0}
       self:updateText(dt)
       self.done = true
-    elseif board_state == Board.board_states.defeat then 
+    elseif board_state == Board.board_states.defeat then -- This sucks
       self.ui_background = {0.25, 0, 0}
     end
   end
   for k, v in ipairs(self.gui) do
-    v:update(dt)
+    v:update(dt) -- GUI
   end
-  self:updateText(dt)
+  self:updateText(dt) -- Text
 end
 
+--- Updates upper gui
 function LevelState:updateText(dt)
   if self.done then
     return

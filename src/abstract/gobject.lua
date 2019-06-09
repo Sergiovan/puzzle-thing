@@ -5,8 +5,8 @@ local utils = require 'utils.utils'
 local GObject = utils.make_class()
 
 function GObject:_init(...)
-  self._x_offset = 0
-  self._y_offset = 0
+  self._x_offset = 0 -- Extra draw + update x offset
+  self._y_offset = 0 -- Extra draw + update y offset
 end
 
 local gcol = love.graphics.getColor
@@ -17,6 +17,7 @@ local scol = love.graphics.setColor
 local ssha = love.graphics.setShader
 local scan = love.graphics.setCanvas
 
+--- Calls _draw() on subclasses
 function GObject:draw(x, y)
   x = (x or 0) + self._x_offset
   y = (y or 0) + self._y_offset
@@ -33,6 +34,7 @@ function GObject:_draw(x, y)
   -- Default does nothing
 end
 
+--- Calls _update() on subclasses
 function GObject:update(dt, x, y)
   x = (x or 0) + self._x_offset
   y = (y or 0) + self._y_offset
@@ -43,6 +45,7 @@ function GObject:_update(dt, x, y)
   -- Default does nothing
 end
 
+--- Calls _resize() on subclasses
 function GObject:resize()
   self:_resize()
 end  

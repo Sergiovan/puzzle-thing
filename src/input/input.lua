@@ -3,6 +3,7 @@ local utils = require 'utils.utils'
 
 local InputControl = utils.make_class()
 
+--- Initializes everything, duh
 function InputControl:_init()
   self.mouse_position   = {love.mouse.getPosition()} -- Current mouse position
   self.mouse_movement   = {0, 0} -- Mouse movement since last update
@@ -17,11 +18,12 @@ function InputControl:_init()
   self.keyboard_press   = {} -- Keys that were pressed this update
   self.keyboard_release = {} -- Keys that were released this update
   
-  self.mouse_moved  = false
-  self.key_pressed  = false
-  self.key_released = false
+  self.mouse_moved  = false -- If the mouse has been moved this update 
+  self.key_pressed  = false -- If a key has been pressed  this update
+  self.key_released = false -- If a key has been released this update
 end
 
+--- Updates the state of the mouse position
 function InputControl:update(dt)
   local mx, my = love.mouse.getPosition()
   self.mouse_movement[1] = mx - self.mouse_position[1]
@@ -35,6 +37,7 @@ function InputControl:update(dt)
   end
 end
 
+--- Sets all state to 0
 function InputControl:clear(dt)
   for k=1,3 do
     self.mouse_press[k] = false
@@ -54,6 +57,7 @@ function InputControl:clear(dt)
   self.key_released = false
 end
 
+--- Updates mouse button state
 function InputControl:mouse_button(button, x, y, press)
   -- Note: Button should be in the range 1:3
   self.mouse_down[button] = press
@@ -63,6 +67,7 @@ function InputControl:mouse_button(button, x, y, press)
   self.mouse_press_pos[button][2] = press and y or 0
 end
 
+--- Updates keyboard state
 function InputControl:keyboard_button(keycode, press)
   self.keyboard_down[keycode] = press
   local c = press and self.keyboard_press or self.keyboard_release
@@ -74,16 +79,19 @@ function InputControl:keyboard_button(keycode, press)
   end
 end
 
+--- Buffers text input
 function InputControl:add_text_input(text)
   -- if self.text_enabled then
   self.text_input = self.text_input .. text -- OPT
   -- end
 end
 
+--- Returns mouse position as a tuple
 function InputControl:get_mouse_position()
   return unpack(self.mouse_position)
 end
 
+--- Single input global object
 local input = InputControl()
 
 return input

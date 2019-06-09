@@ -2,7 +2,7 @@
 
 local module = {}
 
--- Got from http://lua-users.org/wiki/ObjectOrientationTutorial
+--- Got from http://lua-users.org/wiki/ObjectOrientationTutorial
 module.make_class = function (...)
   -- "cls" is the new class
   local cls, bases = {}, {...}
@@ -43,25 +43,28 @@ module.make_class = function (...)
   return cls
 end
 
+--- Determines if file at `path` exists
 module.file_exists = function(path)
   local info = love.filesystem.getInfo(path)
   return info ~= nil
 end
 
+--- Prints a table recursively between (())
 module.deep_lisp = function(table, depth)
   depth = depth or 0
-  if type(table) == 'table' then
+  if type(table) == 'table' then -- Recursive printing
     local cur = (depth > 0 and '\n' or '') .. string.rep(' ', depth) .. '(\n' 
     for k, v in pairs(table) do 
       cur = cur .. string.rep(' ', depth + 1) .. '[' .. (type(k) == 'string' and ('"' .. k .. '"') or tostring(k)) .. '] = '
       cur = cur .. module.deep_lisp(v, depth + 1) .. ',\n'
     end
     return cur .. string.rep(' ', depth) .. ')' 
-  else
+  else -- Normal printing
     return (type(table) == 'string' and ('"' .. table .. '"') or tostring(table))
   end
 end
 
+--- Converts seconds timestamp to a formatted string minutes:seconds.milliseconds
 module.to_time_string = function(num)
   local floor = math.floor
   local format = string.format
@@ -69,9 +72,9 @@ module.to_time_string = function(num)
   if neg then
     num = math.abs(num)
   end
-  local mins = floor(num / 60.0)
+  local mins = floor(num / 60.0) -- Seconds to minutes
   num = num - (mins * 60)
-  local secs = floor(num)
+  local secs = floor(num) -- HAhaa
   num = num - secs
   local millis = num
   return (neg and '-' or '') .. format("%02d", mins) .. ':' .. format("%02d", secs) .. '.' .. format("%03d", floor(millis * 1000))

@@ -3,6 +3,13 @@ local utils = require 'utils.utils'
 
 local Animator = utils.make_class()
 
+--- Returns a table with animation data
+-- `f` is the value at which the animation starts
+-- `t` is the value at which it should end
+-- `i` is the time it needs to take in seconds
+-- `a` is the name of the function to use, or a custom animation function
+-- taking a single parameter, a number in [0,1] that represents
+-- how far along the animation is
 function Animator.fromToIn(f, t, i, a)
   local function linear(x)
     return x
@@ -21,62 +28,69 @@ function Animator.fromToIn(f, t, i, a)
   end
 
   a = a or 'linear'
-  selection = {linear = linear, cube = cube, rcube = rcube, fse = fse}
+  selection = {linear = linear, cube = cube, rcube = rcube, fse = fse} -- Functions by name, yo
   local func = type(a) == 'string' and selection[a] or a
 
+  -- from = begin value
+  -- diff = difference between begin and end values
+  -- time = seconds
+  -- func = function to run
   return {from = f, diff = t - f, time = i, func = func}
 end
 
+--- Kinda self-evident
 function Animator:_init(values, changes, start, loop)
-  self.values   = values
-  self.changes  = changes
+  self.values   = values -- Object in which to change values
+  self.changes  = changes -- Table of {element: animation data} for members of self.values, or functions or numbers
 
-  self.step = 1
-  self.elapsed = 0
-  self.started = start or false
-  self.loop = loop or false
-  self.stopped = false
-  self.finished = false
+  self.step = 1 -- Step of the animation
+  self.elapsed = 0 -- How long the animation has taken
+  self.started = start or false -- If the animation is running
+  self.loop = loop or false -- If the animation should loop
+  self.stopped = false -- If the animation has been stopped
+  self.finished = false -- If the animation has ended
 end
 
+--- Updates the animation status. `dt` is delta time since last call
 function Animator:update(dt)
   if self.finished or self.stopped or not self.started then 
-    return 
+    return -- Do nothing if stopped, ended or not started
   end
 
   self.elapsed = self.elapsed + dt
 
-  local changes = self.changes[self.step]
-  if type(changes) == 'number' then
-    if self.elapsed > changes then
+  local changes = self.changes[self.step] -- Load current step
+  if type(changes) == 'number' then -- Number indicates a wait
+    if self.elapsed > changes then -- If we've waited until x time has passed, continue
       self:skip(changes)
       return self:update(0) -- Tail call, yay
     end
-  elseif type(changes) == 'function' then
+  elseif type(changes) == 'function' then -- Call function, then move on to next step
     changes()
     self:skip(0)
     return self:update(0)
-  else
+  else -- Actual animation data
     local count = 0
     local done = 0
     local maxelapsed = 0
     for k, v in pairs(changes) do
       count = count + 1
-      local x = math.min(self.elapsed / v.time, 1)
-      if x == 1 then
+      local x = math.min(self.elapsed / v.time, 1) -- Calculate x for function
+      if x == 1 then -- We're done!
         done = done + 1
         maxelapsed = math.max(maxelapsed, v.time)
       end
-      self.values[k] = v.from + v.diff * v.func(x)
+      self.values[k] = v.from + v.diff * v.func(x) -- Update value
     end
 
-    if done == count then
-      self:skip(maxelapsed)
+    if done == count then -- All animations done
+      self:skip(maxelapsed) -- Skip to next
       return self:update(0)
     end
   end
 end
 
+--- Begins the animation
 function Animator:start()
   if not self.finished then 
     self.started = true
@@ -84,12 +98,16 @@ function Animator:start()
   end
 end
 
+--- Pauses the animation
 function Animator:stop()
   if not self.finished then 
     self.stopped = true
   end
 end
 
+--- Ends the animation. If `forced` is false,
+-- all animation steps complete, else the animation is simply
+-- stopped as-is
 function Animator:terminate(forced)
   if not forced then
     for i=self.step,#self.changes do 
@@ -106,6 +124,7 @@ function Animator:terminate(forced)
   self.finished = true
 end
 
+--- Resets the whole animation
 function Animator:reset()
   self.started = false
   self.stopped = false
@@ -114,6 +133,9 @@ function Animator:reset()
   self.elapsed = elapsed or 0
 end
 
+--- Skips to the next animation step. Ends the animation when at the end
+-- `elapsed` is the extra time elapsed past the previous step
+-- If `forced` is true the step will be skipped to the end forcibly
 function Animator:skip(elapsed, forced)
   forced = forced or false
   self.step = self.step + 1

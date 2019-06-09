@@ -16,18 +16,20 @@ local board_states = {victory = 'victory', defeat = 'defeat', incomplete = 'inco
 Board.board_states = board_states
 
 function Board:_init(x, y, randomize)
-  self.x = x
-  self.y = y
+  self.x = x -- x position
+  self.y = y -- y position
 
-  self.updated = false
-  self.input_buffer = {}
+  self.updated = false -- If the board state changed with last update
+  self.input_buffer = {} -- Input buffer for movement
 
   local err, mess = self:load(randomize and 'random' or '')
 end
 
+--- Loads level number `num` from file `file`.
+-- `file` can also be the string "random"
 function Board:load(file, num)
   num = num or 1
-  if file == 'random' then 
+  if file == 'random' then -- random map
     self.c = 10
     self.r = 10
     self.focused = {1,1}
@@ -50,7 +52,7 @@ function Board:load(file, num)
     self.score = self.total * 1000
     self.time   = self.total * 2 + 10
     
-  elseif not file or #file == 0 then 
+  elseif not file or #file == 0 then -- blank map
     self.c = 10
     self.r = 10
     self.focused = {1,1}
@@ -71,7 +73,7 @@ function Board:load(file, num)
     self.score = 0
     self.time = self.total + 10
     
-  else
+  else -- Actually load
     local filetext, err = love.filesystem.read(file)
     if filetext then 
       local toks, err = self:tokenize(filetext) -- TODO Level handler or something
@@ -125,6 +127,7 @@ function Board:load(file, num)
   return false, nil
 end
 
+--- Converts a file into tokens for creating a map
 function Board:tokenize(input)
   local ret = {}
   local err = {}
@@ -262,6 +265,7 @@ function Board:tokenize(input)
   end
 end
 
+--- Gives cell at screen coordinates (`x`, `y`)
 function Board:board_coords(x, y)
   x = x - (self.x + self._x_offset)
   y = y - (self.y + self._y_offset)
@@ -271,6 +275,7 @@ function Board:board_coords(x, y)
   return math.floor(x/Cell.width) + 1, math.floor(y/Cell.height) + 1
 end
 
+--- Gives cell based on position on table
 function Board:at(x, y)
   return self.board[x] and self.board[x][y] or nil
 end

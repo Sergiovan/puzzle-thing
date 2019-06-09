@@ -13,11 +13,12 @@ Cell.focused_color = {250/255, 231/255, 96/255}
 Cell.focused_border_color = {200/255, 181/255, 46/255}
 
 function Cell:_init()
-  self.value = 1
-  self.solid = false
-  self.focused = false
+  self.value = 1 -- Value of the cell
+  self.solid = false -- If this cell is impassable
+  self.focused = false -- If this cell is currently focused
 end
 
+--- Draws the cell at (`x`, `y`)
 function Cell:draw(x, y)
   local c = {love.graphics.getColor()}
   love.graphics.setColor(self.focused and self.focused_border_color or self.border_color[self.value + 1])
@@ -27,18 +28,22 @@ function Cell:draw(x, y)
   love.graphics.setColor(c)
 end
 
+--- If this cell is impassable
 function Cell:solid()
   return self.solid
 end
 
+--- If this cell can be entered
 function Cell:can_enter()
   return not self.solid and self.value > 0
 end
 
+--- Enter the cell
 function Cell:enter()
   self.value = self.value - 1
 end
 
+--- Sets the cell as focused
 function Cell:set_focused(focused)
   self.focused = focused
 end
