@@ -18,10 +18,12 @@ end
 --- Starts the game
 function Game:init()
   local LevelState = require 'game.state.level_state'
+  local TestState = require 'game.state.test_state'
   local Console = require 'utils.console'
   
   self.console = Console 'top'
-  self:addState(LevelState())
+  -- self:addState(LevelState())
+  self:addState(TestState())
 end
 
 --- Updates the game state. dt is the seconds since last update

@@ -11,6 +11,7 @@ function InputControl:_init()
   self.mouse_down       = {false, false, false} -- Mouse buttons current down
   self.mouse_press      = {false, false, false} -- If the mouse was clicked this update
   self.mouse_release    = {false, false, false} -- If the mouse was released this update
+  self.mouse_scroll     = {0, 0} -- Mouse scroll last frame
 
   -- self.text_enabled    = false -- Enable storing of keyboard text input
   self.text_input       = "" -- Text input since last update
@@ -55,6 +56,8 @@ function InputControl:clear(dt)
   self.text_input = ""
   self.key_pressed  = false
   self.key_released = false
+  self.mouse_scroll[1] = 0
+  self.mouse_scroll[2] = 0
 end
 
 --- Updates mouse button state
@@ -65,6 +68,12 @@ function InputControl:mouse_button(button, x, y, press)
   c[button] = true
   self.mouse_press_pos[button][1] = press and x or 0
   self.mouse_press_pos[button][2] = press and y or 0
+end
+
+--- Updates scroll state
+function InputControl:mouse_update_scroll(x, y)
+  self.mouse_scroll[1] = self.mouse_scroll[1] + x
+  self.mouse_scroll[2] = self.mouse_scroll[2] + y
 end
 
 --- Updates keyboard state

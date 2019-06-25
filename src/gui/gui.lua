@@ -412,10 +412,224 @@ function Button:_update(dt, x, y)
   end
 end
 
+--- Zones are GUI areas you can scroll in. They contain other GUI elements inside.
+local GUIZone = make_gobject()
+
+GUIZone.scroll_size = 20 -- Width/Height of scroll buttons/bars
+
+--- Make a zone at position (`x`, `y`), and dimensions (`w`, `h`)
+-- If `rw` or `rh` are > 0, they are added to `w` / `h` and that is the real width/height the zone can be scrolled to
+-- If `rw` or `rh` are < 0, then the scroll in the width/height direction is blocked and the gui elements are not rendered
+-- If `rw` or `rh` are == 0, then the real width/height is dynamic based on the elements in the zone
+function GUIZone:_init(x, y, w, h, rw, rh)
+  self.x = x
+  self.y = y
+  self.w = w
+  self.h = h
+  rw = rw ~= nil and rw or -1
+  rh = rh ~= nil and rh or -1 
+  
+  self._real_w = (rw > 0 and rw + w) or w -- Real width, not display width
+  self._real_h = (rh > 0 and rh + h) or h -- Real height, not display height
+  self._scroll_w = rw >= 0 -- If the zone can be scrolled along the x axis
+  self._scroll_h = rh >= 0 -- If the zone can be scrolled along the y axis
+  self._dynamic_w = rw == 0 -- If the width is dynamically sized
+  self._dynamic_h = rh == 0 -- If the height is dynamically sized
+  self._scroll_buttons = { -- Scroll buttons
+    up = nil,
+    down = nil,
+    left = nil,
+    right = nil
+  }
+  self._up_down_scroll = { -- Position and height of the y scroll bar
+    y = 0,
+    h = 0,
+  }
+  self._left_right_scroll = { -- Position and width of the x scroll bar
+    x = 0,
+    w = 0
+  }
+
+  self.x_off = 0 -- Scroll amount along the x axis, [0, _real_w - w)
+  self.y_off = 0 -- Scroll amount along the y axis, [0, _real_h - h)
+  self.elems = {} -- Elements in the zone
+  
+  self._canvas = love.graphics.newCanvas(self.w, self.h)
+  self:resize()
+end
+
+function GUIZone:scroll(x, y)
+  self.x_off = self.x_off + x
+  if self.x_off < 0 then
+    self.x_off = 0
+  elseif self.x_off > self._real_w - self.w then
+    self.x_off = self._real_w - self.w
+  end
+  
+  self.y_off = self.y_off + y
+  if self.y_off < 0 then
+    self.y_off = 0
+  elseif self.y_off > self._real_h - self.h then
+    self.y_off = self._real_h - self.h
+  end
+end
+
+function GUIZone:_draw(x, y)
+  local c = love.graphics.getCanvas()
+  love.graphics.setCanvas(self._canvas)
+  love.graphics.clear({0, 0, 0})
+  for idx, elem in ipairs(self.elems) do
+    local ex, ey = elem:position()
+    local ew, eh = elem:dimensions()
+    if ey + eh < self.y_off or ey > self.h + self.y_off then
+      -- Do not draw
+    elseif ex + ew < self.x_off or ex > self.w + self.x_off then
+      -- Do not draw
+    else
+      elem:draw(-self.x_off, -self.y_off) -- Draw offset
+    end
+  end
+  self:_draw_scroll_bars(x, y)
+  love.graphics.setCanvas(c)
+  love.graphics.setColor({1, 1, 1, 1})
+  love.graphics.draw(self._canvas, self.x + x, self.y + y)
+end
+
+function GUIZone:_draw_scroll_bars(x, y)
+  for k, b in pairs(self._scroll_buttons) do
+    if b ~= nil then
+      b:draw(0, 0)
+    end
+  end
+  love.graphics.setColor({0, 0.5, 0.5, 0.75})
+  if self._scroll_w then
+    love.graphics.rectangle('fill', self._left_right_scroll.x + 20 + GUIZone.scroll_size, self.h - (10 + GUIZone.scroll_size),
+                                    self._left_right_scroll.w, GUIZone.scroll_size)--, 
+                                    --GUIZone.scroll_size / 2, GUIZone.scroll_size / 2)
+  end
+  if self._scroll_h then
+    love.graphics.rectangle('fill', self.w - (10 + GUIZone.scroll_size), self._up_down_scroll.y + 20 + GUIZone.scroll_size, 
+                                GUIZone.scroll_size, self._up_down_scroll.h)--, 
+                                --GUIZone.scroll_size / 2, GUIZone.scroll_size / 2)
+  end
+end
+
+function GUIZone:_update(dt, x, y)
+  local ux, uy = x, y -- Update at normal coordinates only if mouse in zone
+  local mx, my = input:get_mouse_position()
+  local min = true
+  if mx < self.x or mx > self.x + self.w then
+    uy = uy + 1000000
+    min = false
+  end
+  if my < self.y or my > self.y + self.h then
+    uy = uy + 1000000
+    min = false
+  end
+  
+  if min then
+    if input.mouse_scroll[2] ~= 0 then
+      local scroll = input.mouse_scroll[2] * -25
+      if input.keyboard_down['lshift'] or input.keyboard_down['rshift'] then
+        self:scroll(scroll, 0)
+      else
+        self:scroll(0, scroll)
+      end
+      self:_calc_scroll_bars(dt, x, y)
+    end
+  end
+  
+  for idx, elem in ipairs(self.elems) do
+    elem:update(dt, self.x + ux - self.x_off, self.y + uy - self.y_off) -- Draw offset
+  end
+  for k, b in pairs(self._scroll_buttons) do
+    if b ~= nil then
+      b:update(dt, self.x, self.y)
+    end
+  end
+end
+
+function GUIZone:_calc_scroll_bars(dt, x, y)
+  if self._scroll_w and self.w <= self._real_w then
+    local ratio = self.w / self._real_w
+    local pos = self.x_off / self._real_w
+    local scroll_size = self.w - (2 * (20 + GUIZone.scroll_size)) -- 20 = 10 * 2 padding
+    self._left_right_scroll.x = pos * scroll_size
+    self._left_right_scroll.w = ratio * scroll_size
+  else
+    self._left_right_scroll.x = 0
+    self._left_right_scroll.w = 0
+  end
+  if self._scroll_h and self.h <= self._real_h then
+    local ratio = self.h / self._real_h
+    local pos = self.y_off / self._real_h
+    local scroll_size = self.h - (2 * (20 + GUIZone.scroll_size)) -- 20 = 10 * 2 padding
+    self._up_down_scroll.y = pos * scroll_size
+    self._up_down_scroll.h = ratio * scroll_size
+  else
+    self._up_down_scroll.y = 0
+    self._up_down_scroll.h = 0
+  end
+end
+
+function GUIZone:_resize()
+  self:_calc_scroll_bars(0, 0, 0)
+  if self._left_right_scroll.w == 0 then
+    self._scroll_buttons.left = nil
+    self._scroll_buttons.right = nil
+  else
+    if self._scroll_buttons.left == nil then
+      self._scroll_buttons.left = Button(10, self.h - (10 + GUIZone.scroll_size), function () self:scroll(-20, 0) end, 
+                                         {width = GUIZone.scroll_size, height = GUIZone.scroll_size, text = "L", font = fonts.game_small,
+                                          border_color = {1, 1, 1}})
+    end
+    if self._scroll_buttons.right == nil then
+      self._scroll_buttons.right = Button(self.w - (10 + GUIZone.scroll_size), self.h - (10 + GUIZone.scroll_size), function () self:scroll(20, 0) end,
+                                          {width = GUIZone.scroll_size, height = GUIZone.scroll_size, text = "R", font = fonts.game_small,
+                                           border_color = {1, 1, 1}})
+    end
+  end
+  
+  if self._up_down_scroll.h == 0 then
+      self._scroll_buttons.up = nil
+      self._scroll_buttons.down = nil
+  else
+    if self._scroll_buttons.up == nil then
+      self._scroll_buttons.up = Button(self.w - (10 + GUIZone.scroll_size), 10, function () self:scroll(0, -20) end, 
+                                       {width = GUIZone.scroll_size, height = GUIZone.scroll_size, text = "U", font = fonts.game_small,
+                                        border_color = {1, 1, 1}})
+    end
+    if self._scroll_buttons.down == nil then
+      self._scroll_buttons.down = Button(self.w - (10 + GUIZone.scroll_size), self.h - (10 + GUIZone.scroll_size), function () self:scroll(0, 20) end, 
+                                       {width = GUIZone.scroll_size, height = GUIZone.scroll_size, text = "D", font = fonts.game_small,
+                                        border_color = {1, 1, 1}})
+    end
+  end
+end
+
+function GUIZone:add_elem(elem)
+  local ex, ey = elem:position()
+  local ew, eh = elem:dimensions()
+  local resized = false
+  if ey + eh > self._real_h and self._dynamic_h then
+    self._real_h = ey + eh + GUIZone.scroll_size + 20 -- 20 = 10 * 2 padding
+    resized = true
+  end
+  if ex + ew > self._real_w then
+    self._real_w = ex + ew + GUIZone.scroll_size + 20 -- 20 = 10 * 2 padding
+    resized = true
+  end
+  if resized then
+    self:resize()
+  end
+  self.elems[#self.elems + 1] = elem
+end
+
 module.colors = colors
 module.fonts = fonts
 module.Label = Label
 module.TextInput = TextInput
 module.Button = Button
+module.Zone = GUIZone
 
 return module

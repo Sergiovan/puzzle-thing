@@ -54,6 +54,26 @@ function GObject:_resize()
   -- Default does nothing
 end
 
+--- Calls _dimensions() on subclasses
+function GObject:dimensions()
+  return self:_dimensions()
+end
+
+--- Default tries to find dimensions
+function GObject:_dimensions()
+  return self.w or self.width or 0, self.h or self.height or 0
+end
+
+--- Calls _position() on subclasses
+function GObject:position()
+  return self:_position()
+end
+
+--- Default tries to find position
+function GObject:_position()
+  return self.x or 0, self.y or 0
+end
+
 function GObject:change_offset(x, y)
   self._x_offset = self._x_offset + x
   self._y_offset = self._y_offset + y

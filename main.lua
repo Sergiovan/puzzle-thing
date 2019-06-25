@@ -63,6 +63,10 @@ function love.mousereleased(x, y, button, istouch)
   end
 end
 
+function love.wheelmoved(x, y)
+    input:mouse_update_scroll(x, y)
+end
+
 function love.focus(focus)
   -- TODO
 end
