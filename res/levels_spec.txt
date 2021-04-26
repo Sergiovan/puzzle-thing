@@ -1,0 +1,31 @@
+a?: Zero or one of a
+a*: Zero or more a
+a+: One or more a
+a...: Zero or more comma separated a
+
+Level file: Whitespace irrelevant.
+level+ comment?
+
+ comment: Anything. Not taken into account.
+
+ level: A single level. 
+ comment? [version, width, height, start_point, level_name, difficulty, zero..., tile...]
+
+  version: Number. The level spec version. 1 by default. 
+  width: Number. Level width, in tiles.
+  height: Number. Level height, in tiles.
+
+  start_point: Starting position of player for puzzle.
+  (c, r)
+   c: Start column. 1-indexed.
+   r: Start row. 1-indexed. 
+
+  level_name: Quoted string. Level name.
+  difficulty: Number from 1 to 10, inclusive. Level difficulty.
+  zero: A single 0. Padding before the tiles begin. There should be 32 comma separated values before the tiles begin. Done for  backwards compatibility.
+  zero[1]: 26 zeroes (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+  tile: A single tile. Direction is left-right, top-bottom. 
+  tile_id(?param...)?
+   tile_id: Number. The ID of the tile.
+   param: Any. Parameters for the tile.
